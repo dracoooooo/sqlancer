@@ -333,6 +333,69 @@ public abstract class MySQLConstant implements MySQLExpression {
 
     }
 
+
+    public static class MySQLBooleanConstant extends MySQLConstant {
+        private final boolean value;
+
+        private final String stringRepresentation;
+
+        public MySQLBooleanConstant(boolean value) {
+            this.value = value;
+            this.stringRepresentation = String.valueOf(value).toUpperCase();
+        }
+
+        @Override
+        public boolean isInt() {
+            return true;
+        }
+
+        @Override
+        public long getInt() {
+            return value ? 1 : 0;
+        }
+
+        @Override
+        public boolean asBooleanNotNull() {
+            return value;
+        }
+
+        @Override
+        public String getTextRepresentation() {
+            return stringRepresentation;
+        }
+
+        @Override
+        public MySQLConstant isEquals(MySQLConstant rightVal) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public MySQLConstant castAs(CastType type) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public String castAsString() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public MySQLDataType getType() {
+            return MySQLDataType.BOOLEAN;
+        }
+
+        @Override
+        public boolean isSigned() {
+            return false;
+        }
+
+        @Override
+        protected MySQLConstant isLessThan(MySQLConstant rightVal) {
+            throw new UnsupportedOperationException();
+        }
+
+    }
+
     public static class MySQLNullConstant extends MySQLConstant {
 
         @Override
@@ -395,6 +458,14 @@ public abstract class MySQLConstant implements MySQLExpression {
 
     public static MySQLConstant createNullConstant() {
         return new MySQLNullConstant();
+    }
+
+    public static MySQLConstant createBooleanConstant(boolean value) {
+        return new MySQLBooleanConstant(value);
+    }
+
+    public static MySQLConstant createDoubleConstant(double value) {
+        return new MySQLDoubleConstant(value);
     }
 
     public static MySQLConstant createIntConstant(long value) {

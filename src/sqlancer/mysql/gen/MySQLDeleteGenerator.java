@@ -25,7 +25,7 @@ public class MySQLDeleteGenerator {
 
     private SQLQueryAdapter generate() {
         MySQLTable randomTable = globalState.getSchema().getRandomTable();
-        MySQLExpressionGenerator gen = new MySQLExpressionGenerator(globalState).setColumns(randomTable.getColumns());
+        MySQLUntypedExpressionGenerator gen = new MySQLUntypedExpressionGenerator(globalState).setColumns(randomTable.getColumns());
         ExpectedErrors errors = new ExpectedErrors();
         sb.append("DELETE");
         if (Randomly.getBoolean()) {

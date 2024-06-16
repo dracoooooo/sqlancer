@@ -6,9 +6,10 @@ import java.util.List;
 
 import sqlancer.Randomly;
 import sqlancer.mysql.MySQLGlobalState;
+import sqlancer.mysql.MySQLSchema;
 import sqlancer.mysql.MySQLSchema.MySQLColumn;
 import sqlancer.mysql.MySQLSchema.MySQLTable;
-import sqlancer.mysql.gen.MySQLExpressionGenerator;
+import sqlancer.mysql.gen.MySQLTypedExpressionGenerator;
 
 public class MySQLJoin implements MySQLExpression {
 
@@ -68,8 +69,8 @@ public class MySQLJoin implements MySQLExpression {
                 MySQLTable table = Randomly.fromList(tables);
                 tables.remove(table);
                 columns.addAll(table.getColumns());
-                MySQLExpressionGenerator joinGen = new MySQLExpressionGenerator(globalState).setColumns(columns);
-                MySQLExpression joinClause = joinGen.generateExpression();
+                MySQLTypedExpressionGenerator joinGen = new MySQLTypedExpressionGenerator(globalState).setColumns(columns);
+                MySQLExpression joinClause = joinGen.generateExpression(MySQLSchema.MySQLDataType.BOOLEAN);
                 JoinType selectedOption = Randomly.fromList(options);
                 if (selectedOption == JoinType.NATURAL) {
                     // NATURAL joins do not have an ON clause

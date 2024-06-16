@@ -15,7 +15,7 @@ import sqlancer.mysql.MySQLVisitor;
 public class MySQLUpdateGenerator extends AbstractUpdateGenerator<MySQLColumn> {
 
     private final MySQLGlobalState globalState;
-    private MySQLExpressionGenerator gen;
+    private MySQLUntypedExpressionGenerator gen;
 
     public MySQLUpdateGenerator(MySQLGlobalState globalState) {
         this.globalState = globalState;
@@ -28,7 +28,7 @@ public class MySQLUpdateGenerator extends AbstractUpdateGenerator<MySQLColumn> {
     private SQLQueryAdapter generate() throws SQLException {
         MySQLTable table = globalState.getSchema().getRandomTable(t -> !t.isView());
         List<MySQLColumn> columns = table.getRandomNonEmptyColumnSubset();
-        gen = new MySQLExpressionGenerator(globalState).setColumns(table.getColumns());
+        gen = new MySQLUntypedExpressionGenerator(globalState).setColumns(table.getColumns());
         sb.append("UPDATE ");
         sb.append(table.getName());
         sb.append(" SET ");

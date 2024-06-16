@@ -258,6 +258,9 @@ public class MySQLTableGenerator {
     }
 
     private void appendColumnOption(MySQLDataType type) {
+        if (type == MySQLDataType.BOOLEAN) {
+            return;
+        }
         boolean isTextType = type == MySQLDataType.VARCHAR;
         boolean isNull = false;
         boolean columnHasPrimaryKey = false;
@@ -294,15 +297,15 @@ public class MySQLTableGenerator {
                 break;
             case COMMENT:
                 // TODO: generate randomly
-                sb.append(String.format("COMMENT '%s' ", "asdf"));
+//                sb.append(String.format("COMMENT '%s' ", "asdf"));
                 break;
             case COLUMN_FORMAT:
-                sb.append("COLUMN_FORMAT ");
-                sb.append(Randomly.fromOptions("FIXED", "DYNAMIC", "DEFAULT"));
+//                sb.append("COLUMN_FORMAT ");
+//                sb.append(Randomly.fromOptions("FIXED", "DYNAMIC", "DEFAULT"));
                 break;
             case STORAGE:
-                sb.append("STORAGE ");
-                sb.append(Randomly.fromOptions("DISK", "MEMORY"));
+//                sb.append("STORAGE ");
+//                sb.append(Randomly.fromOptions("DISK", "MEMORY"));
                 break;
             case PRIMARY_KEY:
                 // PRIMARY KEYs cannot be NULL
@@ -328,6 +331,9 @@ public class MySQLTableGenerator {
 
     private void appendType(MySQLDataType randomType) {
         switch (randomType) {
+        case BOOLEAN:
+            sb.append("BOOLEAN");
+            break;
         case DECIMAL:
             sb.append("DECIMAL");
             optionallyAddPrecisionAndScale(sb);
@@ -356,12 +362,12 @@ public class MySQLTableGenerator {
             throw new AssertionError();
         }
         if (randomType.isNumeric()) {
-            if (Randomly.getBoolean() && randomType != MySQLDataType.INT && !MySQLBugs.bug99127) {
-                sb.append(" UNSIGNED");
-            }
-            if (!globalState.usesPQS() && Randomly.getBoolean()) {
-                sb.append(" ZEROFILL");
-            }
+//            if (Randomly.getBoolean() && randomType != MySQLDataType.INT && !MySQLBugs.bug99127) {
+//                sb.append(" UNSIGNED");
+//            }
+//            if (!globalState.usesPQS() && Randomly.getBoolean()) {
+//                sb.append(" ZEROFILL");
+//            }
         }
     }
 

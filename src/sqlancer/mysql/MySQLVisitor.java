@@ -106,10 +106,4 @@ public interface MySQLVisitor {
         return visitor.get();
     }
 
-    static String asExpectedValues(MySQLExpression expr) {
-        MySQLExpectedValueVisitor visitor = new MySQLExpectedValueVisitor();
-        visitor.visit(expr);
-        return visitor.get();
-    }
-
 }

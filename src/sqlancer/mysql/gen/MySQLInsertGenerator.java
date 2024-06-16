@@ -68,7 +68,7 @@ public class MySQLInsertGenerator {
         sb.append(columns.stream().map(c -> c.getName()).collect(Collectors.joining(", ")));
         sb.append(") ");
         sb.append("VALUES");
-        MySQLExpressionGenerator gen = new MySQLExpressionGenerator(globalState);
+        MySQLUntypedExpressionGenerator gen = new MySQLUntypedExpressionGenerator(globalState);
         int nrRows;
         if (Randomly.getBoolean()) {
             nrRows = 1;

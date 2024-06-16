@@ -118,7 +118,7 @@ public class MySQLProvider extends SQLProviderAdapter<MySQLGlobalState, MySQLOpt
             nrPerformed = r.getInteger(0, 2);
             break;
         case ALTER_TABLE:
-            nrPerformed = r.getInteger(0, 5);
+            nrPerformed = r.getInteger(0, 0);
             break;
         case TRUNCATE_TABLE:
             nrPerformed = r.getInteger(0, 2);
@@ -153,23 +153,6 @@ public class MySQLProvider extends SQLProviderAdapter<MySQLGlobalState, MySQLOpt
                     }
                 });
         se.executeStatements();
-
-        if (globalState.getDbmsSpecificOptions().getTestOracleFactory().stream()
-                .anyMatch((o) -> o == MySQLOracleFactory.CERT)) {
-            // Enfore statistic collected for all tables
-            ExpectedErrors errors = new ExpectedErrors();
-            MySQLErrors.addExpressionErrors(errors);
-            for (MySQLTable table : globalState.getSchema().getDatabaseTables()) {
-                StringBuilder sb = new StringBuilder();
-                sb.append("ANALYZE TABLE ");
-                sb.append(table.getName());
-                sb.append(" UPDATE HISTOGRAM ON ");
-                String columns = table.getColumns().stream().map(MySQLColumn::getName)
-                        .collect(Collectors.joining(", "));
-                sb.append(columns + ";");
-                globalState.executeStatement(new SQLQueryAdapter(sb.toString(), errors));
-            }
-        }
     }
 
     @Override

@@ -1,16 +1,15 @@
 package sqlancer.mysql.gen;
 
+import sqlancer.Randomly;
+import sqlancer.mysql.MySQLCommon;
+import sqlancer.mysql.MySQLGlobalState;
+import sqlancer.mysql.MySQLSchema;
+import sqlancer.mysql.MySQLSchema.MySQLTables;
+import sqlancer.mysql.ast.*;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import sqlancer.Randomly;
-import sqlancer.mysql.MySQLGlobalState;
-import sqlancer.mysql.MySQLSchema.MySQLTables;
-import sqlancer.mysql.ast.MySQLConstant;
-import sqlancer.mysql.ast.MySQLExpression;
-import sqlancer.mysql.ast.MySQLSelect;
-import sqlancer.mysql.ast.MySQLTableReference;
 
 public final class MySQLRandomQuerySynthesizer {
 
@@ -19,7 +18,7 @@ public final class MySQLRandomQuerySynthesizer {
 
     public static MySQLSelect generate(MySQLGlobalState globalState, int nrColumns) {
         MySQLTables tables = globalState.getSchema().getRandomTableNonEmptyTables();
-        MySQLExpressionGenerator gen = new MySQLExpressionGenerator(globalState).setColumns(tables.getColumns());
+        MySQLUntypedExpressionGenerator gen = new MySQLUntypedExpressionGenerator(globalState).setColumns(tables.getColumns());
         MySQLSelect select = new MySQLSelect();
         List<MySQLExpression> columns = new ArrayList<>();
 
@@ -41,6 +40,60 @@ public final class MySQLRandomQuerySynthesizer {
                 select.setHavingClause(gen.generateHavingClause());
             }
         }
+        if (Randomly.getBoolean()) {
+            select.setLimitClause(MySQLConstant.createIntConstant(Randomly.getPositiveOrZeroNonCachedInteger()));
+            if (Randomly.getBoolean()) {
+                select.setOffsetClause(MySQLConstant.createIntConstant(Randomly.getPositiveOrZeroNonCachedInteger()));
+            }
+        }
+        return select;
+    }
+
+    public static MySQLSelect generateTyped(MySQLGlobalState globalState, int nrColumns) {
+        MySQLTables tables = globalState.getSchema().getRandomTableNonEmptyTables();
+        MySQLTypedExpressionGenerator gen = new MySQLTypedExpressionGenerator(globalState).setColumns(tables.getColumns());
+        MySQLSelect select = new MySQLSelect();
+
+        boolean allowAggregates = Randomly.getBooleanWithSmallProbability();
+        List<MySQLExpression> columns = new ArrayList<>();
+        List<MySQLExpression> columnsWithoutAggregates = new ArrayList<>();
+        for (int i = 0; i < nrColumns; i++) {
+            // TODO
+
+//            if (allowAggregates && Randomly.getBoolean()) {
+                MySQLExpression expression = gen.generateExpression(MySQLSchema.MySQLDataType.getRandom(globalState));
+                columns.add(expression);
+                columnsWithoutAggregates.add(expression);
+//            }
+//            else {
+//                columns.add(gen.generateAggregate());
+//            }
+        }
+        select.setFetchColumns(columns);
+        List<MySQLTableReference> tableList = tables.getTables().stream()
+                .map(MySQLTableReference::new).collect(Collectors.toList());
+        List<MySQLExpression> updatedTableList = MySQLCommon.getTableReferences(tableList);
+
+        // TODO: support join later
+//        if (Randomly.getBoolean()) {
+//            select.setJoinList(MySQLJoin.getRandomJoinClauses(tables.getTables(), globalState));
+//        }
+        select.setFromList(updatedTableList);
+        if (Randomly.getBoolean()) {
+            select.setWhereClause(gen.generateExpression(MySQLSchema.MySQLDataType.BOOLEAN));
+        }
+
+        if (Randomly.getBooleanWithRatherLowProbability()) {
+            select.setOrderByClauses(gen.generateOrderBys());
+        }
+
+        if (Randomly.getBoolean()) {
+            select.setGroupByExpressions(gen.generateExpressions(Randomly.smallNumber() + 1));
+            if (Randomly.getBoolean()) {
+                select.setHavingClause(gen.generateHavingClause());
+            }
+        }
+
         if (Randomly.getBoolean()) {
             select.setLimitClause(MySQLConstant.createIntConstant(Randomly.getPositiveOrZeroNonCachedInteger()));
             if (Randomly.getBoolean()) {

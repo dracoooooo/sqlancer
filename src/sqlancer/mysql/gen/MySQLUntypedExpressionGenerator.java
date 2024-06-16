@@ -33,16 +33,16 @@ import sqlancer.mysql.ast.MySQLUnaryPostfixOperation;
 import sqlancer.mysql.ast.MySQLUnaryPrefixOperation;
 import sqlancer.mysql.ast.MySQLUnaryPrefixOperation.MySQLUnaryPrefixOperator;
 
-public class MySQLExpressionGenerator extends UntypedExpressionGenerator<MySQLExpression, MySQLColumn> {
+public class MySQLUntypedExpressionGenerator extends UntypedExpressionGenerator<MySQLExpression, MySQLColumn> {
 
     private final MySQLGlobalState state;
     private MySQLRowValue rowVal;
 
-    public MySQLExpressionGenerator(MySQLGlobalState state) {
+    public MySQLUntypedExpressionGenerator(MySQLGlobalState state) {
         this.state = state;
     }
 
-    public MySQLExpressionGenerator setRowVal(MySQLRowValue rowVal) {
+    public MySQLUntypedExpressionGenerator setRowVal(MySQLRowValue rowVal) {
         this.rowVal = rowVal;
         return this;
     }
