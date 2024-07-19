@@ -79,20 +79,20 @@ public final class MySQLRandomQuerySynthesizer {
 //            select.setJoinList(MySQLJoin.getRandomJoinClauses(tables.getTables(), globalState));
 //        }
         select.setFromList(updatedTableList);
-        if (Randomly.getBoolean()) {
+//        if (Randomly.getBoolean()) {
             select.setWhereClause(gen.generateExpression(MySQLSchema.MySQLDataType.BOOLEAN));
-        }
+//        }
 
         if (Randomly.getBooleanWithRatherLowProbability()) {
             select.setOrderByClauses(gen.generateOrderBys());
         }
 
-        if (Randomly.getBoolean()) {
-            select.setGroupByExpressions(gen.generateExpressions(Randomly.smallNumber() + 1));
-            if (Randomly.getBoolean()) {
-                select.setHavingClause(gen.generateHavingClause());
-            }
-        }
+//        if (Randomly.getBoolean()) {
+//            select.setGroupByExpressions(gen.generateExpressions(Randomly.smallNumber() + 1));
+//            if (Randomly.getBoolean()) {
+//                select.setHavingClause(gen.generateHavingClause());
+//            }
+//        }
 
         if (Randomly.getBoolean()) {
             select.setLimitClause(MySQLConstant.createIntConstant(Randomly.getPositiveOrZeroNonCachedInteger()));

@@ -39,6 +39,7 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
 
     @Override
     public MySQLExpression generateConstant(MySQLSchema.MySQLDataType type) {
+        // TODO: Support null later
         if (Randomly.getBooleanWithRatherLowProbability()) {
             return MySQLConstant.createNullConstant();
         }
