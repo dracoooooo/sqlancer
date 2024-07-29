@@ -486,7 +486,7 @@ public final class Randomly {
     }
 
     public static long getPositiveOrZeroNonCachedInteger() {
-        return getNextLong(0, Long.MAX_VALUE);
+        return getNextLong(0, Integer.MAX_VALUE);
     }
 
     public static long getNotCachedInteger(int lower, int upper) {

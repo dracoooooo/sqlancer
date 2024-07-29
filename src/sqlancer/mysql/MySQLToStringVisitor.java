@@ -5,26 +5,8 @@ import java.util.stream.Collectors;
 
 import sqlancer.Randomly;
 import sqlancer.common.visitor.ToStringVisitor;
-import sqlancer.mysql.ast.MySQLBetweenOperation;
-import sqlancer.mysql.ast.MySQLBinaryComparisonOperation;
-import sqlancer.mysql.ast.MySQLBinaryLogicalOperation;
-import sqlancer.mysql.ast.MySQLBinaryOperation;
-import sqlancer.mysql.ast.MySQLCastOperation;
-import sqlancer.mysql.ast.MySQLCollate;
-import sqlancer.mysql.ast.MySQLColumnReference;
-import sqlancer.mysql.ast.MySQLComputableFunction;
-import sqlancer.mysql.ast.MySQLConstant;
-import sqlancer.mysql.ast.MySQLExists;
-import sqlancer.mysql.ast.MySQLExpression;
-import sqlancer.mysql.ast.MySQLInOperation;
-import sqlancer.mysql.ast.MySQLJoin;
-import sqlancer.mysql.ast.MySQLOrderByTerm;
+import sqlancer.mysql.ast.*;
 import sqlancer.mysql.ast.MySQLOrderByTerm.MySQLOrder;
-import sqlancer.mysql.ast.MySQLSelect;
-import sqlancer.mysql.ast.MySQLStringExpression;
-import sqlancer.mysql.ast.MySQLTableReference;
-import sqlancer.mysql.ast.MySQLText;
-import sqlancer.mysql.ast.MySQLUnaryPostfixOperation;
 
 public class MySQLToStringVisitor extends ToStringVisitor<MySQLExpression> implements MySQLVisitor {
 
@@ -193,6 +175,17 @@ public class MySQLToStringVisitor extends ToStringVisitor<MySQLExpression> imple
 
     @Override
     public void visit(MySQLBinaryComparisonOperation op) {
+        sb.append("(");
+        visit(op.getLeft());
+        sb.append(") ");
+        sb.append(op.getOp().getTextRepresentation());
+        sb.append(" (");
+        visit(op.getRight());
+        sb.append(")");
+    }
+
+    @Override
+    public void visit(MySQLBinaryArithmeticOperation op) {
         sb.append("(");
         visit(op.getLeft());
         sb.append(") ");

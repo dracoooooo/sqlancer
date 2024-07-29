@@ -2,8 +2,6 @@ package sqlancer.mysql.gen;
 
 import sqlancer.IgnoreMeException;
 import sqlancer.Randomly;
-import sqlancer.cockroachdb.CockroachDBSchema;
-import sqlancer.cockroachdb.ast.*;
 import sqlancer.common.gen.TypedExpressionGenerator;
 import sqlancer.mysql.MySQLBugs;
 import sqlancer.mysql.MySQLGlobalState;
@@ -40,16 +38,16 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
     @Override
     public MySQLExpression generateConstant(MySQLSchema.MySQLDataType type) {
         // TODO: Support null later
-        if (Randomly.getBooleanWithRatherLowProbability()) {
-            return MySQLConstant.createNullConstant();
-        }
+//        if (Randomly.getBooleanWithRatherLowProbability()) {
+//            return MySQLConstant.createNullConstant();
+//        }
         switch (type) {
             case BOOLEAN:
                 return MySQLConstant.createBoolean(Randomly.getBoolean());
             case FLOAT:
             case DOUBLE:
-                return MySQLConstant.createDoubleConstant(globalState.getRandomly().getDouble());
             case DECIMAL:
+                return MySQLConstant.createDoubleConstant(globalState.getRandomly().getDouble());
             case INT:
                 return MySQLConstant.createIntConstant(globalState.getRandomly().getInteger());
             case VARCHAR:
@@ -63,9 +61,9 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
 
     private enum BooleanExpression {
         NOT, IS_NULL, BINARY_LOGICAL_OPERATOR,
-        BINARY_COMPARISON_OPERATION, EXISTS, BETWEEN_OPERATOR,
+        BINARY_COMPARISON_OPERATION, BETWEEN_OPERATOR,
         // TODO
-//        COMPUTABLE_FUNCTION, CAST, IN_OPERATION, BINARY_OPERATION
+//        EXISTS, COMPUTABLE_FUNCTION, CAST, IN_OPERATION, BINARY_OPERATION
     }
 
     private MySQLExpression getExists() {
@@ -73,6 +71,17 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
             return new MySQLExists(new MySQLStringExpression("SELECT 1", MySQLConstant.createTrue()));
         } else {
             return new MySQLExists(new MySQLStringExpression("SELECT 1 WHERE FALSE", MySQLConstant.createFalse()));
+        }
+    }
+
+    private MySQLSchema.MySQLDataType getRandomTypeForBetween() {
+        var typesForBetween = List.of(MySQLSchema.MySQLDataType.INT, MySQLSchema.MySQLDataType.DOUBLE,
+                MySQLSchema.MySQLDataType.DECIMAL, MySQLSchema.MySQLDataType.FLOAT);
+        var columnsForBetween = columns.stream().filter(c -> typesForBetween.contains(c.getType())).collect(Collectors.toList());
+        if (columnsForBetween.isEmpty() || Randomly.getBooleanWithRatherLowProbability()) {
+            return Randomly.fromList(typesForBetween);
+        } else {
+            return Randomly.fromList(columnsForBetween).getType();
         }
     }
 
@@ -91,14 +100,18 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
                         MySQLBinaryLogicalOperation.MySQLBinaryLogicalOperator.getRandom());
             case BINARY_COMPARISON_OPERATION: {
                 // TODO: maybe unable to be parsed in Cypher
-                MySQLSchema.MySQLDataType type = getRandomType();
+                MySQLSchema.MySQLDataType type = getRandomTypeForBetween();
+                var op = MySQLBinaryComparisonOperation.BinaryComparisonOperator.getRandom();
+                if (op == MySQLBinaryComparisonOperation.BinaryComparisonOperator.LIKE) {
+                    type = MySQLSchema.MySQLDataType.VARCHAR;
+                }
 
-                return new MySQLBinaryComparisonOperation(generateExpression(type,depth + 1), generateExpression(type, depth + 1),
-                        MySQLBinaryComparisonOperation.BinaryComparisonOperator.getRandom());
+                return new MySQLBinaryComparisonOperation(generateExpression(type,depth + 1), generateExpression(type, depth + 1), op);
             }
 
-            case EXISTS:
-                return getExists();
+            // TODO: support EXISTS later
+//            case EXISTS:
+//                return getExists();
             case BETWEEN_OPERATOR: {
                 // TODO: maybe unable to be parsed in Cypher
                 if (MySQLBugs.bug99181) {
@@ -113,28 +126,62 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
         }
     }
 
-    private enum Actions {
-        COLUMN, LITERAL, BOOLEAN,
-
-        // TODO
-//        CAST,
+    private enum ArithmeticExpression {
+        UNARY_OPERATION, BINARY_ARITHMETIC_OPERATION
     }
 
+    private MySQLExpression generateIntExpression(int depth) {
+        var intExpression = Randomly.fromOptions(ArithmeticExpression.values());
+        switch (intExpression) {
+            case UNARY_OPERATION:
+                return new MySQLUnaryPrefixOperation(generateExpression(MySQLSchema.MySQLDataType.INT, depth + 1),
+                        Randomly.getBoolean() ? MySQLUnaryPrefixOperation.MySQLUnaryPrefixOperator.PLUS
+                                : MySQLUnaryPrefixOperation.MySQLUnaryPrefixOperator.MINUS);
+            case BINARY_ARITHMETIC_OPERATION:
+                return new MySQLBinaryArithmeticOperation(generateExpression(MySQLSchema.MySQLDataType.INT, depth + 1),
+                        generateExpression(MySQLSchema.MySQLDataType.INT, depth + 1),
+                        MySQLBinaryArithmeticOperation.BinaryArithmeticOperator.getRandom());
+            default:
+                throw new AssertionError();
+        }
+    }
+
+    private MySQLExpression generateFloatExpression(MySQLSchema.MySQLDataType type, int depth) {
+        if (type != MySQLSchema.MySQLDataType.FLOAT && type != MySQLSchema.MySQLDataType.DOUBLE && type != MySQLSchema.MySQLDataType.DECIMAL) {
+            throw new AssertionError();
+        }
+        var floatExpression = Randomly.fromOptions(ArithmeticExpression.values());
+        switch (floatExpression) {
+            case UNARY_OPERATION:
+                return new MySQLUnaryPrefixOperation(generateExpression(type, depth + 1),
+                        Randomly.getBoolean() ? MySQLUnaryPrefixOperation.MySQLUnaryPrefixOperator.PLUS
+                                : MySQLUnaryPrefixOperation.MySQLUnaryPrefixOperator.MINUS);
+            case BINARY_ARITHMETIC_OPERATION:
+                return new MySQLBinaryArithmeticOperation(generateExpression(type, depth + 1),
+                        generateExpression(type, depth + 1),
+                        MySQLBinaryArithmeticOperation.BinaryArithmeticOperator.getRandom());
+            default:
+                throw new AssertionError();
+        }
+    }
 
     @Override
     protected MySQLExpression generateExpression(MySQLSchema.MySQLDataType type, int depth) {
         if (depth >= globalState.getOptions().getMaxExpressionDepth()) {
             return generateLeafNode(type);
         }
-        switch (Randomly.fromOptions(Actions.values())) {
-            case COLUMN:
-                if (canGenerateColumnOfType(type)) {
-                    return generateColumn(type);
-                }
-            case LITERAL:
-                return generateConstant(type);
+        // BOOLEAN, INT, VARCHAR, FLOAT, DOUBLE, DECIMAL;
+        switch (type) {
             case BOOLEAN:
                 return generateBooleanExpression(depth);
+            case INT:
+                return generateIntExpression(depth);
+            case FLOAT:
+            case DOUBLE:
+            case DECIMAL:
+                return generateFloatExpression(type, depth);
+            case VARCHAR:
+                return generateConstant(type);
             default:
                 throw new AssertionError();
         }
