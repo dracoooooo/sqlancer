@@ -2,12 +2,17 @@ package sqlancer.mysql.ast;
 
 import sqlancer.Randomly;
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 public class MySQLBinaryArithmeticOperation implements MySQLExpression {
     public enum BinaryArithmeticOperator {
         ADD("+"),
         MIN("-"),
         MUL("*"),
-        DIV("/");
+        FLOAT_DIV("/");
+        // Currently jooq does not support `DIV`, so temporarily commented out
+//        INT_DIV("DIV");
         private final String textRepresentation;
 
         public String getTextRepresentation() {
@@ -18,8 +23,15 @@ public class MySQLBinaryArithmeticOperation implements MySQLExpression {
             this.textRepresentation = textRepresentation;
         }
 
-        public static BinaryArithmeticOperator getRandom() {
+        public static BinaryArithmeticOperator getRandomFloatOp() {
+//            var values = Arrays.stream(values()).filter(op -> op != INT_DIV).collect(Collectors.toList());
+//            return Randomly.fromList(values);
             return Randomly.fromOptions(values());
+        }
+
+        public static BinaryArithmeticOperator getRandomIntOp() {
+            var values = Arrays.stream(values()).filter(op -> op != FLOAT_DIV).collect(Collectors.toList());
+            return Randomly.fromList(values);
         }
     }
 

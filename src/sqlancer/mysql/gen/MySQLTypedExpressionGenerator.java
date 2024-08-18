@@ -102,9 +102,9 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
                 // TODO: maybe unable to be parsed in Cypher
                 MySQLSchema.MySQLDataType type = getRandomTypeForBetween();
                 var op = MySQLBinaryComparisonOperation.BinaryComparisonOperator.getRandom();
-                if (op == MySQLBinaryComparisonOperation.BinaryComparisonOperator.LIKE) {
-                    type = MySQLSchema.MySQLDataType.VARCHAR;
-                }
+//                if (op == MySQLBinaryComparisonOperation.BinaryComparisonOperator.LIKE) {
+//                    type = MySQLSchema.MySQLDataType.VARCHAR;
+//                }
 
                 return new MySQLBinaryComparisonOperation(generateExpression(type,depth + 1), generateExpression(type, depth + 1), op);
             }
@@ -113,7 +113,6 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
 //            case EXISTS:
 //                return getExists();
             case BETWEEN_OPERATOR: {
-                // TODO: maybe unable to be parsed in Cypher
                 if (MySQLBugs.bug99181) {
                     // TODO: there are a number of bugs that are triggered by the BETWEEN operator
                     throw new IgnoreMeException();
@@ -127,12 +126,14 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
     }
 
     private enum ArithmeticExpression {
-        UNARY_OPERATION, BINARY_ARITHMETIC_OPERATION
+        LEAF_NODE,UNARY_OPERATION, BINARY_ARITHMETIC_OPERATION
     }
 
     private MySQLExpression generateIntExpression(int depth) {
         var intExpression = Randomly.fromOptions(ArithmeticExpression.values());
         switch (intExpression) {
+            case LEAF_NODE:
+                return generateLeafNode(MySQLSchema.MySQLDataType.INT);
             case UNARY_OPERATION:
                 return new MySQLUnaryPrefixOperation(generateExpression(MySQLSchema.MySQLDataType.INT, depth + 1),
                         Randomly.getBoolean() ? MySQLUnaryPrefixOperation.MySQLUnaryPrefixOperator.PLUS
@@ -140,18 +141,20 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
             case BINARY_ARITHMETIC_OPERATION:
                 return new MySQLBinaryArithmeticOperation(generateExpression(MySQLSchema.MySQLDataType.INT, depth + 1),
                         generateExpression(MySQLSchema.MySQLDataType.INT, depth + 1),
-                        MySQLBinaryArithmeticOperation.BinaryArithmeticOperator.getRandom());
+                        MySQLBinaryArithmeticOperation.BinaryArithmeticOperator.getRandomIntOp());
             default:
                 throw new AssertionError();
         }
     }
 
-    private MySQLExpression generateFloatExpression(MySQLSchema.MySQLDataType type, int depth) {
-        if (type != MySQLSchema.MySQLDataType.FLOAT && type != MySQLSchema.MySQLDataType.DOUBLE && type != MySQLSchema.MySQLDataType.DECIMAL) {
+    private MySQLExpression generateDecimalExpression(MySQLSchema.MySQLDataType type, int depth) {
+        if (type != MySQLSchema.MySQLDataType.DECIMAL) {
             throw new AssertionError();
         }
-        var floatExpression = Randomly.fromOptions(ArithmeticExpression.values());
-        switch (floatExpression) {
+        var decimalExpression = Randomly.fromOptions(ArithmeticExpression.values());
+        switch (decimalExpression) {
+            case LEAF_NODE:
+                return generateLeafNode(type);
             case UNARY_OPERATION:
                 return new MySQLUnaryPrefixOperation(generateExpression(type, depth + 1),
                         Randomly.getBoolean() ? MySQLUnaryPrefixOperation.MySQLUnaryPrefixOperator.PLUS
@@ -159,7 +162,7 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
             case BINARY_ARITHMETIC_OPERATION:
                 return new MySQLBinaryArithmeticOperation(generateExpression(type, depth + 1),
                         generateExpression(type, depth + 1),
-                        MySQLBinaryArithmeticOperation.BinaryArithmeticOperator.getRandom());
+                        MySQLBinaryArithmeticOperation.BinaryArithmeticOperator.getRandomFloatOp());
             default:
                 throw new AssertionError();
         }
@@ -179,9 +182,8 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
             case FLOAT:
             case DOUBLE:
             case DECIMAL:
-                return generateFloatExpression(type, depth);
             case VARCHAR:
-                return generateConstant(type);
+                return generateLeafNode(type);
             default:
                 throw new AssertionError();
         }

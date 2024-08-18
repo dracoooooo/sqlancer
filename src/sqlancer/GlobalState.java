@@ -75,7 +75,7 @@ public abstract class GlobalState<O extends DBMSSpecificOptions<?>, S extends Ab
     }
 
     public String getDatabaseName() {
-        return databaseName;
+        return "test";
     }
 
     public void setDatabaseName(String databaseName) {
