@@ -153,6 +153,7 @@ public class MySQLProvider extends SQLProviderAdapter<MySQLGlobalState, MySQLOpt
                     }
                 });
         se.executeStatements();
+        globalState.getLogger().writeCurrent("-- Database Generation finished");
     }
 
     @Override

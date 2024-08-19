@@ -117,7 +117,7 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
                     // TODO: there are a number of bugs that are triggered by the BETWEEN operator
                     throw new IgnoreMeException();
                 }
-                MySQLSchema.MySQLDataType type = getRandomType();
+                MySQLSchema.MySQLDataType type = getRandomTypeForBetween();
                 return new MySQLBetweenOperation(generateExpression(type,depth + 1), generateExpression(type, depth + 1), generateExpression(type, depth + 1));
             }
             default:
