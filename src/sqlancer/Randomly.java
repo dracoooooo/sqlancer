@@ -196,9 +196,25 @@ public final class Randomly {
         return THREAD_RANDOM;
     }
 
+//    public long getInteger() {
+//        if (smallBiasProbability()) {
+//            return Randomly.fromOptions(-1L, Long.MAX_VALUE, Long.MIN_VALUE, 1L, 0L);
+//        } else {
+//            if (cacheProbability()) {
+//                Long l = getFromLongCache();
+//                if (l != null) {
+//                    return l;
+//                }
+//            }
+//            long nextLong = getThreadRandom().get().nextInt();
+//            addToCache(nextLong);
+//            return nextLong;
+//        }
+//    }
+
     public long getInteger() {
         if (smallBiasProbability()) {
-            return Randomly.fromOptions(-1L, Long.MAX_VALUE, Long.MIN_VALUE, 1L, 0L);
+            return Randomly.fromOptions(-1, Integer.MAX_VALUE, Integer.MIN_VALUE, 1, 0);
         } else {
             if (cacheProbability()) {
                 Long l = getFromLongCache();
@@ -206,9 +222,9 @@ public final class Randomly {
                     return l;
                 }
             }
-            long nextLong = getThreadRandom().get().nextInt();
-            addToCache(nextLong);
-            return nextLong;
+            long nextInt = getThreadRandom().get().nextInt();
+            addToCache(nextInt);
+            return nextInt;
         }
     }
 

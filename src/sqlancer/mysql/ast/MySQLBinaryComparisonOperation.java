@@ -77,21 +77,24 @@ public class MySQLBinaryComparisonOperation implements MySQLExpression {
                 }
             }
 
-        },
-        LIKE("LIKE") {
-
-            @Override
-            public MySQLConstant getExpectedValue(MySQLConstant leftVal, MySQLConstant rightVal) {
-                if (leftVal.isNull() || rightVal.isNull()) {
-                    return MySQLConstant.createNullConstant();
-                }
-                String leftStr = leftVal.castAsString();
-                String rightStr = rightVal.castAsString();
-                boolean matches = LikeImplementationHelper.match(leftStr, rightStr, 0, 0, false);
-                return MySQLConstant.createBoolean(matches);
-            }
-
         };
+        /** The LIKE in MySQL is a simple pattern matching, whereas =~ in Cypher is used for regular expression matching.
+         * Therefore, temporarily disable the translation of LIKE.
+         */
+//        LIKE("LIKE") {
+//
+//            @Override
+//            public MySQLConstant getExpectedValue(MySQLConstant leftVal, MySQLConstant rightVal) {
+//                if (leftVal.isNull() || rightVal.isNull()) {
+//                    return MySQLConstant.createNullConstant();
+//                }
+//                String leftStr = leftVal.castAsString();
+//                String rightStr = rightVal.castAsString();
+//                boolean matches = LikeImplementationHelper.match(leftStr, rightStr, 0, 0, false);
+//                return MySQLConstant.createBoolean(matches);
+//            }
+//
+//        };
         // https://bugs.mysql.com/bug.php?id=95908
         /*
          * IS_EQUALS_NULL_SAFE("<=>") {

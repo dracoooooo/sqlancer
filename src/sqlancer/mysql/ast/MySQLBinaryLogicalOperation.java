@@ -10,7 +10,7 @@ public class MySQLBinaryLogicalOperation implements MySQLExpression {
     private final String textRepresentation;
 
     public enum MySQLBinaryLogicalOperator {
-        AND("AND", "&&") {
+        AND("AND", "AND") {
             @Override
             public MySQLConstant apply(MySQLConstant left, MySQLConstant right) {
                 if (left.isNull() && right.isNull()) {
@@ -32,7 +32,7 @@ public class MySQLBinaryLogicalOperation implements MySQLExpression {
                 }
             }
         },
-        OR("OR", "||") {
+        OR("OR", "OR") {
             @Override
             public MySQLConstant apply(MySQLConstant left, MySQLConstant right) {
                 if (!left.isNull() && left.asBooleanNotNull()) {

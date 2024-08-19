@@ -129,21 +129,22 @@ public class MySQLToStringVisitor extends ToStringVisitor<MySQLExpression> imple
             sb.append("NOT ");
         }
         switch (op.getOperator()) {
-            case IS_FALSE:
-                sb.append("FALSE");
-                break;
-            case IS_NULL:
-                if (Randomly.getBoolean()) {
-                    sb.append("UNKNOWN");
-                } else {
-                    sb.append("NULL");
-                }
-                break;
-            case IS_TRUE:
-                sb.append("TRUE");
-                break;
-            default:
-                throw new AssertionError(op);
+        case IS_FALSE:
+            sb.append("FALSE");
+            break;
+        case IS_NULL:
+//            if (Randomly.getBoolean()) {
+//                sb.append("UNKNOWN");
+//            } else {
+//                sb.append("NULL");
+//            }
+            sb.append("NULL");
+            break;
+        case IS_TRUE:
+            sb.append("TRUE");
+            break;
+        default:
+            throw new AssertionError(op);
         }
     }
 
@@ -282,41 +283,29 @@ public class MySQLToStringVisitor extends ToStringVisitor<MySQLExpression> imple
     public void visit(MySQLJoin join) {
         sb.append(" ");
         switch (join.getType()) {
-            case NATURAL:
-                sb.append("NATURAL ");
-                break;
-            case INNER:
-                sb.append("INNER ");
-                break;
-            case STRAIGHT:
-                sb.append("STRAIGHT_");
-                break;
-            case LEFT:
-                sb.append("LEFT ");
-                break;
-            case RIGHT:
-                sb.append("RIGHT ");
-                break;
-            case CROSS:
-                sb.append("CROSS ");
-                break;
-            default:
-                throw new AssertionError(join.getType());
+        case NATURAL:
+            sb.append("NATURAL ");
+            break;
+        case INNER:
+            sb.append("INNER ");
+            break;
+        case STRAIGHT:
+            sb.append("STRAIGHT_");
+            break;
+        case LEFT:
+            sb.append("LEFT ");
+            break;
+        case RIGHT:
+            sb.append("RIGHT ");
+            break;
+        case CROSS:
+            sb.append("CROSS ");
+            break;
+        default:
+            throw new AssertionError(join.getType());
         }
         sb.append("JOIN ");
-        MySQLFromItem joinItem = join.getJoinItem();
-        if (joinItem instanceof MySQLTableReference) {
-            MySQLTableReference tableReference = (MySQLTableReference) joinItem;
-            MySQLSchema.MySQLTable table = tableReference.getTable();
-            sb.append(table.getName());
-        } else {
-            MySQLSubquery subquery = (MySQLSubquery) joinItem;
-            sb.append("(");
-            visit(subquery.getSelect());
-            sb.append(")");
-            sb.append(" AS ");
-            sb.append(subquery.getName() + "_" + ref++);
-        }
+        sb.append(join.getTable().getName());
         if (join.getOnClause() != null) {
             sb.append(" ON ");
             visit(join.getOnClause());

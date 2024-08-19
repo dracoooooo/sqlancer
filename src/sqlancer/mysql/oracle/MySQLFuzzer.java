@@ -20,7 +20,8 @@ public class MySQLFuzzer implements TestOracle<MySQLGlobalState> {
         String s = MySQLVisitor.asString(MySQLRandomQuerySynthesizer.generateTyped(globalState, Randomly.smallNumber() + 1))
                 + ';';
         try {
-            globalState.executeStatement(new SQLQueryAdapter(s));
+            globalState.getLogger().writeCurrent(s);
+//            globalState.executeStatement(new SQLQueryAdapter(s));
             globalState.getManager().incrementSelectQueryCount();
         } catch (Error e) {
 
