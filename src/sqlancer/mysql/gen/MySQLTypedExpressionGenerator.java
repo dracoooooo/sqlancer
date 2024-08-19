@@ -224,14 +224,21 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
 
 
     public MySQLExpression generateAggregate() {
-        // TODO
-        throw new UnsupportedOperationException();
+        return getAggregate(getRandomType());
     }
 
     private MySQLExpression getAggregate(MySQLSchema.MySQLDataType type) {
-         // TODO
-        throw new UnsupportedOperationException();
+        MySQLAggregate.MySQLAggregateFunction function = MySQLAggregate.MySQLAggregateFunction.getRandom();
+
+        if (function == MySQLAggregate.MySQLAggregateFunction.COUNT && Randomly.getBoolean()) {
+            // COUNT(*) 的特殊情况
+            return new MySQLAggregate(function, null, true);
+        } else {
+            MySQLExpression expr = generateExpression(type, 0);
+            return new MySQLAggregate(function, expr, false);
+        }
     }
+
 
     public MySQLExpression generateHavingClause() {
         allowAggregates = true;

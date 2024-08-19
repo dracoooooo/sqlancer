@@ -78,6 +78,7 @@ public final class MySQLRandomQuerySynthesizer {
 //        if (Randomly.getBoolean()) {
 //            select.setJoinList(MySQLJoin.getRandomJoinClauses(tables.getTables(), globalState));
 //        }
+
         select.setFromList(updatedTableList);
 //        if (Randomly.getBoolean()) {
             select.setWhereClause(gen.generateExpression(MySQLSchema.MySQLDataType.BOOLEAN));

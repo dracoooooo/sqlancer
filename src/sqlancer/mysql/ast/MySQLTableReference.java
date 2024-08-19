@@ -2,7 +2,10 @@ package sqlancer.mysql.ast;
 
 import sqlancer.mysql.MySQLSchema.MySQLTable;
 
-public class MySQLTableReference implements MySQLExpression {
+public class MySQLTableReference implements MySQLFromItem {
+    public String getName() {
+        return table.getName();
+    }
 
     private final MySQLTable table;
 
