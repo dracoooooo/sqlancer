@@ -104,4 +104,36 @@ public final class MySQLRandomQuerySynthesizer {
         return select;
     }
 
+    public static MySQLSelect generateTypedSingleColumn(MySQLGlobalState globalState, MySQLSchema.MySQLDataType requiredType) {
+        MySQLTables tables = globalState.getSchema().getRandomTableNonEmptyTables();
+        MySQLTypedExpressionGenerator gen = new MySQLTypedExpressionGenerator(globalState).setColumns(tables.getColumns());
+        MySQLSelect select = new MySQLSelect();
+
+        // Generate a single column of the required type
+        MySQLExpression column = gen.generateExpression(requiredType);
+        select.setFetchColumns(List.of(column));
+
+        List<MySQLTableReference> tableList = tables.getTables().stream()
+                .map(MySQLTableReference::new).collect(Collectors.toList());
+        List<MySQLExpression> updatedTableList = MySQLCommon.getTableReferences(tableList);
+        select.setFromList(updatedTableList);
+
+        if (Randomly.getBoolean()) {
+            select.setWhereClause(gen.generateExpression(MySQLSchema.MySQLDataType.BOOLEAN));
+        }
+
+        if (Randomly.getBooleanWithRatherLowProbability()) {
+            select.setOrderByClauses(gen.generateOrderBys());
+        }
+
+        if (Randomly.getBoolean()) {
+            select.setLimitClause(MySQLConstant.createIntConstant(Randomly.getPositiveOrZeroNonCachedInteger()));
+            if (Randomly.getBoolean()) {
+                select.setOffsetClause(MySQLConstant.createIntConstant(Randomly.getPositiveOrZeroNonCachedInteger()));
+            }
+        }
+
+        return select;
+    }
+
 }

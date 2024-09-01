@@ -61,17 +61,33 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
 
     private enum BooleanExpression {
         NOT, IS_NULL, BINARY_LOGICAL_OPERATOR,
-        BINARY_COMPARISON_OPERATION, BETWEEN_OPERATOR,
+        BINARY_COMPARISON_OPERATION, BETWEEN_OPERATOR,EXISTS,
+        SUBQUERY_COMPARISON_OPERATION
         // TODO
-//        EXISTS, COMPUTABLE_FUNCTION, CAST, IN_OPERATION, BINARY_OPERATION
+//        COMPUTABLE_FUNCTION, CAST, IN_OPERATION, BINARY_OPERATION
     }
 
     private MySQLExpression getExists() {
-        if (Randomly.getBoolean()) {
-            return new MySQLExists(new MySQLStringExpression("SELECT 1", MySQLConstant.createTrue()));
-        } else {
-            return new MySQLExists(new MySQLStringExpression("SELECT 1 WHERE FALSE", MySQLConstant.createFalse()));
+
+        MySQLGlobalState globalState = this.globalState;
+        int nrColumns = Randomly.smallNumber() + 1; // randomly generate a number between 1 and 5 of columns to select
+
+        MySQLSelect subquery;
+        subquery = MySQLRandomQuerySynthesizer.generateTyped(globalState, nrColumns);
+
+        boolean isNegated = Randomly.getBoolean();
+        MySQLExpression existsExpression = new MySQLExists(subquery);
+        if (isNegated) {
+            existsExpression = new MySQLUnaryPrefixOperation(existsExpression, MySQLUnaryPrefixOperation.MySQLUnaryPrefixOperator.NOT);
         }
+
+        return existsExpression;
+//        if (Randomly.getBoolean()) {
+//            return new MySQLExists(new MySQLStringExpression("SELECT 1", MySQLConstant.createTrue()));
+//        } else {
+//            return new MySQLExists(new MySQLStringExpression("SELECT 1 WHERE FALSE", MySQLConstant.createFalse()));
+//        }
+
     }
 
     private MySQLSchema.MySQLDataType getRandomTypeForBetween() {
@@ -106,27 +122,29 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
 //                    type = MySQLSchema.MySQLDataType.VARCHAR;
 //                }
 
-                return new MySQLBinaryComparisonOperation(generateExpression(type,depth + 1), generateExpression(type, depth + 1), op);
+                return new MySQLBinaryComparisonOperation(generateExpression(type, depth + 1), generateExpression(type, depth + 1), op);
             }
 
-            // TODO: support EXISTS later
-//            case EXISTS:
-//                return getExists();
+
+            case EXISTS:
+                return getExists();
             case BETWEEN_OPERATOR: {
                 if (MySQLBugs.bug99181) {
                     // TODO: there are a number of bugs that are triggered by the BETWEEN operator
                     throw new IgnoreMeException();
                 }
                 MySQLSchema.MySQLDataType type = getRandomTypeForBetween();
-                return new MySQLBetweenOperation(generateExpression(type,depth + 1), generateExpression(type, depth + 1), generateExpression(type, depth + 1));
+                return new MySQLBetweenOperation(generateExpression(type, depth + 1), generateExpression(type, depth + 1), generateExpression(type, depth + 1));
             }
+            case SUBQUERY_COMPARISON_OPERATION:
+                return generateSubqueryComparison(depth + 1);
             default:
                 throw new AssertionError();
         }
     }
 
     private enum ArithmeticExpression {
-        LEAF_NODE,UNARY_OPERATION, BINARY_ARITHMETIC_OPERATION
+        LEAF_NODE, UNARY_OPERATION, BINARY_ARITHMETIC_OPERATION
     }
 
     private MySQLExpression generateIntExpression(int depth) {
@@ -167,6 +185,7 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
                 throw new AssertionError();
         }
     }
+
 
     @Override
     protected MySQLExpression generateExpression(MySQLSchema.MySQLDataType type, int depth) {
@@ -248,4 +267,19 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
         allowAggregates = false;
         return expression;
     }
+
+    private MySQLExpression generateSubqueryComparison(int depth) {
+        MySQLSchema.MySQLDataType type = MySQLSchema.MySQLDataType.getRandom(globalState);
+        MySQLExpression leftExpression = generateExpression(type, depth + 1);
+        MySQLBinaryComparisonOperation.BinaryComparisonOperator comparisonOperator =
+                MySQLBinaryComparisonOperation.BinaryComparisonOperator.getRandom();
+        MySQLSubqueryComparisonOperation.SubqueryComparisonOperator subqueryOperator = MySQLSubqueryComparisonOperation.SubqueryComparisonOperator.getRandom();
+
+        // Generate a subquery that returns a single column of the same type
+        MySQLSelect subquery = MySQLRandomQuerySynthesizer.generateTypedSingleColumn(globalState, type);
+
+        return new MySQLSubqueryComparisonOperation(leftExpression, comparisonOperator, subqueryOperator, subquery);
+    }
+
+
 }

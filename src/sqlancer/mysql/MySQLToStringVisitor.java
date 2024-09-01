@@ -243,7 +243,7 @@ public class MySQLToStringVisitor extends ToStringVisitor<MySQLExpression> imple
 
     @Override
     public void visit(MySQLExists op) {
-        sb.append(" EXISTS (");
+        sb.append("EXISTS (");
         visit(op.getExpr());
         sb.append(")");
     }
@@ -321,6 +321,26 @@ public class MySQLToStringVisitor extends ToStringVisitor<MySQLExpression> imple
             sb.append(" ON ");
             visit(join.getOnClause());
         }
+    }
+
+    @Override
+    public void visit(MySQLSubqueryComparisonOperation comparison) {
+        sb.append("(");
+        visit(comparison.getLeftExpression());
+        sb.append(") ");
+        sb.append(comparison.getComparisonOperator().getTextRepresentation());
+        sb.append(" ");
+        switch (comparison.getSubqueryOperator()) {
+            case ALL:
+                sb.append("ALL ");
+                break;
+            case ANY:
+                sb.append("ANY ");
+                break;
+        }
+        sb.append("(");
+        visit(comparison.getSubquery());
+        sb.append(")");
     }
 
     @Override

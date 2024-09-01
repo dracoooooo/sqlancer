@@ -22,6 +22,8 @@ public interface MySQLVisitor {
 
     void visit(MySQLBinaryArithmeticOperation op);
 
+    void visit(MySQLSubqueryComparisonOperation op); // (1
+
     void visit(MySQLCastOperation op);
 
     void visit(MySQLInOperation op);
@@ -81,6 +83,8 @@ public interface MySQLVisitor {
             visit((MySQLCollate) expr);
         } else if (expr instanceof MySQLText) {
             visit((MySQLText) expr);
+        } else if (expr instanceof MySQLSubqueryComparisonOperation) {
+            visit((MySQLSubqueryComparisonOperation) expr);
         } else {
             throw new AssertionError(expr);
         }

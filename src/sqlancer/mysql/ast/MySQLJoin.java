@@ -65,13 +65,13 @@ public class MySQLJoin implements MySQLExpression {
             // while other joins will produce duplicate column names
             if (nrJoinClauses > 1) {
                 options.remove(JoinType.NATURAL);
-            }//多个连接子句与自然连接不兼容，因为它需要唯一的列名，而其他连接将生成重复的列名
+            }
             for (int i = 0; i < nrJoinClauses; i++) {
                 MySQLFromItem joinItem = getRandomFromItem(tables, globalState);
                 if(joinItem instanceof MySQLTableReference) {
                     MySQLTableReference tableReference = (MySQLTableReference) joinItem;
                     MySQLTable table = tableReference.getTable();
-                    //从tables中移除已经连接的表
+                    //remove the joined table from tables
                     tables.remove(table);
                     columns.addAll(table.getColumns());
                 }
@@ -93,10 +93,10 @@ public class MySQLJoin implements MySQLExpression {
 
     private static MySQLFromItem getRandomFromItem(List<MySQLTable> tables, MySQLGlobalState globalState) {
         if (Randomly.getBoolean()) {
-            // 返回一个普通表
+            // return a table
             return new MySQLTableReference(Randomly.fromList(tables));
         } else {
-            // 生成一个子查询
+            // return a subquery
             return generateSubquery(tables, globalState);
         }
     }
