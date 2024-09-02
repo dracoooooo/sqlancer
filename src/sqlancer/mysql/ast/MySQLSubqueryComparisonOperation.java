@@ -5,7 +5,7 @@ import sqlancer.Randomly;
 public class MySQLSubqueryComparisonOperation implements MySQLExpression {
 
     public enum SubqueryComparisonOperator {
-        ANY, ALL;
+        ANY, ALL, IN;
 
         public static SubqueryComparisonOperator getRandom() {
             return Randomly.fromOptions(values());

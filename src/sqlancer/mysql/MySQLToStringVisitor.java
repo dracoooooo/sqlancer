@@ -328,14 +328,21 @@ public class MySQLToStringVisitor extends ToStringVisitor<MySQLExpression> imple
         sb.append("(");
         visit(comparison.getLeftExpression());
         sb.append(") ");
-        sb.append(comparison.getComparisonOperator().getTextRepresentation());
-        sb.append(" ");
+        switch (comparison.getSubqueryOperator()) {
+            case ALL:
+            case ANY:
+                sb.append(comparison.getComparisonOperator().getTextRepresentation());
+                sb.append(" ");
+        }
         switch (comparison.getSubqueryOperator()) {
             case ALL:
                 sb.append("ALL ");
                 break;
             case ANY:
                 sb.append("ANY ");
+                break;
+            case IN:
+                sb.append("IN ");
                 break;
         }
         sb.append("(");
