@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 
 public final class Randomly {
@@ -215,17 +216,17 @@ public final class Randomly {
     public long getInteger() {
         if (smallBiasProbability()) {
             return Randomly.fromOptions(-1, Integer.MAX_VALUE, Integer.MIN_VALUE, 1, 0);
-        } else {
-            if (cacheProbability()) {
-                Long l = getFromLongCache();
-                if (l != null) {
-                    return l;
-                }
-            }
-            long nextInt = getThreadRandom().get().nextInt();
-            addToCache(nextInt);
-            return nextInt;
         }
+        if (cacheProbability()) {
+            Long l = getFromLongCache();
+            if (l != null) {
+                return l;
+            }
+        }
+//            long nextInt = getThreadRandom().get().nextInt();
+        long nextInt = ThreadLocalRandom.current().nextInt(-100, 101);;
+        addToCache(nextInt);
+        return nextInt;
     }
 
     public enum StringGenerationStrategy {

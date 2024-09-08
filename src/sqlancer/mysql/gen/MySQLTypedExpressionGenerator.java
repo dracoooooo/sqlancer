@@ -276,7 +276,7 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
         MySQLSubqueryComparisonOperation.SubqueryComparisonOperator subqueryOperator = MySQLSubqueryComparisonOperation.SubqueryComparisonOperator.getRandom();
 
         // Generate a subquery that returns a single column of the same type
-        MySQLSelect subquery = MySQLRandomQuerySynthesizer.generateTypedSingleColumn(globalState, type);
+        MySQLSelect subquery = MySQLRandomQuerySynthesizer.generateTypedSingleColumnWithoutSkipAndLimit(globalState, type);
 
         return new MySQLSubqueryComparisonOperation(leftExpression, comparisonOperator, subqueryOperator, subquery);
     }
