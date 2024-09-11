@@ -29,17 +29,19 @@ public class MySQLTableGenerator {
     private final List<String> columns = new ArrayList<>();
     private final MySQLSchema schema;
     private final MySQLGlobalState globalState;
+    private final boolean forcePrimaryKey; //used to ensure every table has a primary key
 
-    public MySQLTableGenerator(MySQLGlobalState globalState, String tableName) {
+    public MySQLTableGenerator(MySQLGlobalState globalState, String tableName, boolean forcePrimaryKey) {
         this.tableName = tableName;
         this.r = globalState.getRandomly();
         this.schema = globalState.getSchema();
         allowPrimaryKey = Randomly.getBoolean();
         this.globalState = globalState;
+        this.forcePrimaryKey = forcePrimaryKey;
     }
 
-    public static SQLQueryAdapter generate(MySQLGlobalState globalState, String tableName) {
-        return new MySQLTableGenerator(globalState, tableName).create();
+    public static SQLQueryAdapter generate(MySQLGlobalState globalState, String tableName, boolean forcePrimaryKey) {
+        return new MySQLTableGenerator(globalState, tableName, forcePrimaryKey).create();
     }
 
     private SQLQueryAdapter create() {
@@ -86,6 +88,77 @@ public class MySQLTableGenerator {
 
     }
 
+    public static SQLQueryAdapter generateWithForeignKey(MySQLGlobalState globalState, String tableName, MySQLSchema.MySQLTable referencedTable, boolean forcePrimaryKey) {
+        MySQLTableGenerator generator = new MySQLTableGenerator(globalState, tableName, forcePrimaryKey);
+        return generator.createWithForeignKey(referencedTable);
+    }
+
+    private SQLQueryAdapter createWithForeignKey(MySQLSchema.MySQLTable referencedTable) {
+        ExpectedErrors errors = new ExpectedErrors();
+
+        sb.append("CREATE");
+        sb.append(" TABLE");
+        if (Randomly.getBoolean()) {
+            sb.append(" IF NOT EXISTS");
+        }
+        sb.append(" ");
+        sb.append(tableName);
+        sb.append("(");
+
+        // generate normal columns
+        for (int i = 0; i < 1 + Randomly.smallNumber(); i++) {
+            if (i != 0) {
+                sb.append(", ");
+            }
+            appendColumn(i);
+        }
+
+        // generate foreign key column
+        if (referencedTable != null) {
+
+            MySQLSchema.MySQLColumn referencedColumn = referencedTable.getPrimaryKey();
+            String columnName = DBMSCommon.createColumnName(columns.size());
+            columns.add(columnName);
+
+            sb.append(", ");
+            sb.append(columnName);
+            sb.append(" ");
+
+            // use the same type as the referenced column
+            sb.append(getColumnType(referencedColumn));
+
+            sb.append(", FOREIGN KEY (");
+            sb.append(columnName);
+            sb.append(") REFERENCES ");
+            sb.append(referencedTable.getName());
+            sb.append("(");
+            sb.append(referencedColumn.getName());
+            sb.append(")");
+        }
+
+        sb.append(")");
+
+        appendTableOptions();
+        appendPartitionOptions();
+
+        if (engine == MySQLEngine.CSV && (tableHasNullableColumn || setPrimaryKey)) {
+            throw new IgnoreMeException();
+        } else if (engine == MySQLEngine.ARCHIVE && (tableHasNullableColumn || keysSpecified > 1)) {
+            errors.add("Too many keys specified; max 1 keys allowed");
+            errors.add("Table handler doesn't support NULL in given index");
+        }
+
+        addCommonErrors(errors);
+        return new SQLQueryAdapter(sb.toString(), errors, true);
+    }
+
+    // 新增方法：获取列的完整类型定义
+    private String getColumnType(MySQLSchema.MySQLColumn column) {
+        StringBuilder typeDef = new StringBuilder();
+        typeDef.append(column.getExactType());
+        return typeDef.toString();
+    }
+
     private void addCommonErrors(ExpectedErrors list) {
         list.add("The storage engine for the table doesn't support");
         list.add("doesn't have this option");
@@ -111,34 +184,34 @@ public class MySQLTableGenerator {
         }
         sb.append(" PARTITION BY");
         switch (Randomly.fromOptions(PartitionOptions.values())) {
-        case HASH:
-            if (Randomly.getBoolean()) {
-                sb.append(" LINEAR");
-            }
-            sb.append(" HASH(");
-            // TODO: consider arbitrary expressions
-            // MySQLExpression expr =
-            // MySQLRandomExpressionGenerator.generateRandomExpression(Collections.emptyList(),
-            // null, r);
-            // sb.append(MySQLVisitor.asString(expr));
-            sb.append(Randomly.fromList(columns));
-            sb.append(")");
-            break;
-        case KEY:
-            if (Randomly.getBoolean()) {
-                sb.append(" LINEAR");
-            }
-            sb.append(" KEY");
-            if (Randomly.getBoolean()) {
-                sb.append(" ALGORITHM=");
-                sb.append(Randomly.fromOptions(1, 2));
-            }
-            sb.append(" (");
-            sb.append(Randomly.nonEmptySubset(columns).stream().collect(Collectors.joining(", ")));
-            sb.append(")");
-            break;
-        default:
-            throw new AssertionError();
+            case HASH:
+                if (Randomly.getBoolean()) {
+                    sb.append(" LINEAR");
+                }
+                sb.append(" HASH(");
+                // TODO: consider arbitrary expressions
+                // MySQLExpression expr =
+                // MySQLRandomExpressionGenerator.generateRandomExpression(Collections.emptyList(),
+                // null, r);
+                // sb.append(MySQLVisitor.asString(expr));
+                sb.append(Randomly.fromList(columns));
+                sb.append(")");
+                break;
+            case KEY:
+                if (Randomly.getBoolean()) {
+                    sb.append(" LINEAR");
+                }
+                sb.append(" KEY");
+                if (Randomly.getBoolean()) {
+                    sb.append(" ALGORITHM=");
+                    sb.append(Randomly.fromOptions(1, 2));
+                }
+                sb.append(" (");
+                sb.append(Randomly.nonEmptySubset(columns).stream().collect(Collectors.joining(", ")));
+                sb.append(")");
+                break;
+            default:
+                throw new AssertionError();
         }
     }
 
@@ -170,78 +243,78 @@ public class MySQLTableGenerator {
                 sb.append(", ");
             }
             switch (o) {
-            case AUTO_INCREMENT:
-                sb.append("AUTO_INCREMENT = ");
-                sb.append(r.getPositiveInteger());
-                break;
-            // The valid range for avg_row_length is [0,4294967295]
-            case AVG_ROW_LENGTH:
-                sb.append("AVG_ROW_LENGTH = ");
-                sb.append(r.getLong(0, 4294967295L + 1));
-                break;
-            case CHECKSUM:
-                sb.append("CHECKSUM = 1");
-                break;
-            case COMPRESSION:
-                sb.append("COMPRESSION = '");
-                sb.append(Randomly.fromOptions("ZLIB", "LZ4", "NONE"));
-                sb.append("'");
-                break;
-            case DELAY_KEY_WRITE:
-                sb.append("DELAY_KEY_WRITE = ");
-                sb.append(Randomly.fromOptions(0, 1));
-                break;
-            case ENGINE:
-                // FEDERATED: java.sql.SQLSyntaxErrorException: Unknown storage engine
-                // 'FEDERATED'
-                // "NDB": java.sql.SQLSyntaxErrorException: Unknown storage engine 'NDB'
-                // "EXAMPLE": java.sql.SQLSyntaxErrorException: Unknown storage engine 'EXAMPLE'
-                // "MERGE": java.sql.SQLException: Table 't0' is read only
-                String fromOptions = Randomly.fromOptions("InnoDB", "MyISAM", "MEMORY", "HEAP", "CSV", "ARCHIVE");
-                this.engine = MySQLEngine.get(fromOptions);
-                sb.append("ENGINE = ");
-                sb.append(fromOptions);
-                break;
-            // case ENCRYPTION:
-            // sb.append("ENCRYPTION = '");
-            // sb.append(Randomly.fromOptions("Y", "N"));
-            // sb.append("'");
-            // break;
-            case INSERT_METHOD:
-                sb.append("INSERT_METHOD = ");
-                sb.append(Randomly.fromOptions("NO", "FIRST", "LAST"));
-                break;
-            // The valid range for key_block_size is [0,65535]
-            case KEY_BLOCK_SIZE:
-                sb.append("KEY_BLOCK_SIZE = ");
-                sb.append(r.getInteger(0, 65535 + 1));
-                break;
-            case MAX_ROWS:
-                sb.append("MAX_ROWS = ");
-                sb.append(r.getLong(0, Long.MAX_VALUE));
-                break;
-            case MIN_ROWS:
-                sb.append("MIN_ROWS = ");
-                sb.append(r.getLong(1, Long.MAX_VALUE));
-                break;
-            case PACK_KEYS:
-                sb.append("PACK_KEYS = ");
-                sb.append(Randomly.fromOptions("1", "0", "DEFAULT"));
-                break;
-            case STATS_AUTO_RECALC:
-                sb.append("STATS_AUTO_RECALC = ");
-                sb.append(Randomly.fromOptions("1", "0", "DEFAULT"));
-                break;
-            case STATS_PERSISTENT:
-                sb.append("STATS_PERSISTENT = ");
-                sb.append(Randomly.fromOptions("1", "0", "DEFAULT"));
-                break;
-            case STATS_SAMPLE_PAGES:
-                sb.append("STATS_SAMPLE_PAGES = ");
-                sb.append(r.getInteger(1, Short.MAX_VALUE));
-                break;
-            default:
-                throw new AssertionError(o);
+                case AUTO_INCREMENT:
+                    sb.append("AUTO_INCREMENT = ");
+                    sb.append(r.getPositiveInteger());
+                    break;
+                // The valid range for avg_row_length is [0,4294967295]
+                case AVG_ROW_LENGTH:
+                    sb.append("AVG_ROW_LENGTH = ");
+                    sb.append(r.getLong(0, 4294967295L + 1));
+                    break;
+                case CHECKSUM:
+                    sb.append("CHECKSUM = 1");
+                    break;
+                case COMPRESSION:
+                    sb.append("COMPRESSION = '");
+                    sb.append(Randomly.fromOptions("ZLIB", "LZ4", "NONE"));
+                    sb.append("'");
+                    break;
+                case DELAY_KEY_WRITE:
+                    sb.append("DELAY_KEY_WRITE = ");
+                    sb.append(Randomly.fromOptions(0, 1));
+                    break;
+                case ENGINE:
+                    // FEDERATED: java.sql.SQLSyntaxErrorException: Unknown storage engine
+                    // 'FEDERATED'
+                    // "NDB": java.sql.SQLSyntaxErrorException: Unknown storage engine 'NDB'
+                    // "EXAMPLE": java.sql.SQLSyntaxErrorException: Unknown storage engine 'EXAMPLE'
+                    // "MERGE": java.sql.SQLException: Table 't0' is read only
+                    String fromOptions = Randomly.fromOptions("InnoDB", "MyISAM", "MEMORY", "HEAP", "CSV", "ARCHIVE");
+                    this.engine = MySQLEngine.get(fromOptions);
+                    sb.append("ENGINE = ");
+                    sb.append(fromOptions);
+                    break;
+                // case ENCRYPTION:
+                // sb.append("ENCRYPTION = '");
+                // sb.append(Randomly.fromOptions("Y", "N"));
+                // sb.append("'");
+                // break;
+                case INSERT_METHOD:
+                    sb.append("INSERT_METHOD = ");
+                    sb.append(Randomly.fromOptions("NO", "FIRST", "LAST"));
+                    break;
+                // The valid range for key_block_size is [0,65535]
+                case KEY_BLOCK_SIZE:
+                    sb.append("KEY_BLOCK_SIZE = ");
+                    sb.append(r.getInteger(0, 65535 + 1));
+                    break;
+                case MAX_ROWS:
+                    sb.append("MAX_ROWS = ");
+                    sb.append(r.getLong(0, Long.MAX_VALUE));
+                    break;
+                case MIN_ROWS:
+                    sb.append("MIN_ROWS = ");
+                    sb.append(r.getLong(1, Long.MAX_VALUE));
+                    break;
+                case PACK_KEYS:
+                    sb.append("PACK_KEYS = ");
+                    sb.append(Randomly.fromOptions("1", "0", "DEFAULT"));
+                    break;
+                case STATS_AUTO_RECALC:
+                    sb.append("STATS_AUTO_RECALC = ");
+                    sb.append(Randomly.fromOptions("1", "0", "DEFAULT"));
+                    break;
+                case STATS_PERSISTENT:
+                    sb.append("STATS_PERSISTENT = ");
+                    sb.append(Randomly.fromOptions("1", "0", "DEFAULT"));
+                    break;
+                case STATS_SAMPLE_PAGES:
+                    sb.append("STATS_SAMPLE_PAGES = ");
+                    sb.append(r.getInteger(1, Short.MAX_VALUE));
+                    break;
+                default:
+                    throw new AssertionError(o);
             }
         }
     }
@@ -250,14 +323,14 @@ public class MySQLTableGenerator {
         String columnName = DBMSCommon.createColumnName(columnId);
         columns.add(columnName);
         sb.append(columnName);
-        appendColumnDefinition();
+        appendColumnDefinition(columnId == 0 && forcePrimaryKey);
     }
 
     private enum ColumnOptions {
         NULL_OR_NOT_NULL, UNIQUE, COMMENT, COLUMN_FORMAT, STORAGE, PRIMARY_KEY
     }
 
-    private void appendColumnOption(MySQLDataType type) {
+    private void appendColumnOption(MySQLDataType type, boolean forceAsPrimaryKey) {
         if (type == MySQLDataType.BOOLEAN) {
             return;
         }
@@ -273,93 +346,105 @@ public class MySQLTableGenerator {
             columnOptions.remove(ColumnOptions.PRIMARY_KEY);
             columnOptions.remove(ColumnOptions.UNIQUE);
         }
+        if (forceAsPrimaryKey || (allowPrimaryKey && !setPrimaryKey && Randomly.getBoolean() && !isTextType)) {
+            if (!columnOptions.contains(ColumnOptions.PRIMARY_KEY)) {
+                columnOptions.add(ColumnOptions.PRIMARY_KEY);
+            }
+            columnOptions.remove(ColumnOptions.NULL_OR_NOT_NULL);
+        } else if (columnOptions.contains(ColumnOptions.PRIMARY_KEY)) {
+            columnOptions.remove(ColumnOptions.PRIMARY_KEY);
+        }
         for (ColumnOptions o : columnOptions) {
             sb.append(" ");
             switch (o) {
-            case NULL_OR_NOT_NULL:
-                // PRIMARY KEYs cannot be NULL
-                if (!columnHasPrimaryKey) {
-                    if (Randomly.getBoolean()) {
-                        sb.append("NULL");
+                case NULL_OR_NOT_NULL:
+                    // PRIMARY KEYs cannot be NULL
+                    if (!columnHasPrimaryKey) {
+                        if (Randomly.getBoolean()) {
+                            sb.append("NULL");
+                        }
+                        tableHasNullableColumn = true;
+                        isNull = true;
+                    } else {
+                        sb.append("NOT NULL");
                     }
-                    tableHasNullableColumn = true;
-                    isNull = true;
-                } else {
-                    sb.append("NOT NULL");
-                }
-                break;
-            case UNIQUE:
-                sb.append("UNIQUE");
-                keysSpecified++;
-                if (Randomly.getBoolean()) {
-                    sb.append(" KEY");
-                }
-                break;
-            case COMMENT:
-                // TODO: generate randomly
+                    break;
+                case UNIQUE:
+                    sb.append("UNIQUE");
+                    keysSpecified++;
+                    if (Randomly.getBoolean()) {
+                        sb.append(" KEY");
+                    }
+                    break;
+                case COMMENT:
+                    // TODO: generate randomly
 //                sb.append(String.format("COMMENT '%s' ", "asdf"));
-                break;
-            case COLUMN_FORMAT:
+                    break;
+                case COLUMN_FORMAT:
 //                sb.append("COLUMN_FORMAT ");
 //                sb.append(Randomly.fromOptions("FIXED", "DYNAMIC", "DEFAULT"));
-                break;
-            case STORAGE:
+                    break;
+                case STORAGE:
 //                sb.append("STORAGE ");
 //                sb.append(Randomly.fromOptions("DISK", "MEMORY"));
-                break;
-            case PRIMARY_KEY:
-                // PRIMARY KEYs cannot be NULL
-                if (allowPrimaryKey && !setPrimaryKey && !isNull) {
+                    break;
+                case PRIMARY_KEY:
+                    // PRIMARY KEYs cannot be NULL
                     sb.append("PRIMARY KEY");
                     setPrimaryKey = true;
                     columnHasPrimaryKey = true;
-                }
-                break;
-            default:
-                throw new AssertionError();
+
+                    break;
+                default:
+                    throw new AssertionError();
             }
         }
     }
 
-    private void appendColumnDefinition() {
+    private void appendColumnDefinition(boolean forceAsPrimaryKey) {
         sb.append(" ");
         MySQLDataType randomType = MySQLDataType.getRandom(globalState);
+        if (forceAsPrimaryKey) {
+            while (randomType == MySQLDataType.VARCHAR) {
+                randomType = MySQLDataType.getRandom(globalState);
+            }
+        }
         appendType(randomType);
         sb.append(" ");
-        appendColumnOption(randomType);
+        appendColumnOption(randomType, forceAsPrimaryKey);
     }
 
     private void appendType(MySQLDataType randomType) {
         switch (randomType) {
-        case BOOLEAN:
-            sb.append("BOOLEAN");
-            break;
-        case DECIMAL:
-            sb.append("DECIMAL");
-            optionallyAddPrecisionAndScale(sb);
-            break;
-        case INT:
-            sb.append(Randomly.fromOptions("TINYINT", "SMALLINT", "MEDIUMINT", "INT", "BIGINT"));
-            if (Randomly.getBoolean()) {
-                sb.append("(");
-                sb.append(Randomly.getNotCachedInteger(0, 255)); // Display width out of range for column 'c0' (max =
-                // 255)
-                sb.append(")");
-            }
-            break;
-        case VARCHAR:
-            sb.append(Randomly.fromOptions("VARCHAR(500)", "TINYTEXT", "TEXT", "MEDIUMTEXT", "LONGTEXT"));
-            break;
-        case FLOAT:
-            sb.append("FLOAT");
-            optionallyAddPrecisionAndScale(sb);
-            break;
-        case DOUBLE:
-            sb.append(Randomly.fromOptions("DOUBLE", "FLOAT"));
-            optionallyAddPrecisionAndScale(sb);
-            break;
-        default:
-            throw new AssertionError();
+            case BOOLEAN:
+                sb.append("BOOLEAN");
+                break;
+            case DECIMAL:
+                sb.append("DECIMAL");
+                optionallyAddPrecisionAndScale(sb);
+                break;
+            case INT:
+                sb.append(Randomly.fromOptions("TINYINT", "SMALLINT", "MEDIUMINT", "INT", "BIGINT"));
+                if (Randomly.getBoolean()) {
+                    sb.append("(");
+                    sb.append(Randomly.getNotCachedInteger(0, 255)); // Display width out of range for column 'c0' (max =
+                    // 255)
+                    sb.append(")");
+                }
+                break;
+            case VARCHAR:
+                sb.append(Randomly.fromOptions("VARCHAR(500)", "TINYTEXT", "TEXT", "MEDIUMTEXT", "LONGTEXT"));
+                break;
+            case FLOAT:
+                sb.append("FLOAT");
+                optionallyAddPrecisionAndScale(sb);
+                break;
+            case DOUBLE:
+                sb.append(Randomly.fromOptions("DOUBLE", "FLOAT"));
+                optionallyAddPrecisionAndScale(sb);
+                break;
+            default:
+                throw new AssertionError();
         }
         if (randomType.isNumeric()) {
 //            if (Randomly.getBoolean() && randomType != MySQLDataType.INT && !MySQLBugs.bug99127) {

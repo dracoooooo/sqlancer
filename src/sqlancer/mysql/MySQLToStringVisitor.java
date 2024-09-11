@@ -304,19 +304,7 @@ public class MySQLToStringVisitor extends ToStringVisitor<MySQLExpression> imple
                 throw new AssertionError(join.getType());
         }
         sb.append("JOIN ");
-        MySQLFromItem joinItem = join.getJoinItem();
-        if (joinItem instanceof MySQLTableReference) {
-            MySQLTableReference tableReference = (MySQLTableReference) joinItem;
-            MySQLSchema.MySQLTable table = tableReference.getTable();
-            sb.append(table.getName());
-        } else {
-            MySQLSubquery subquery = (MySQLSubquery) joinItem;
-            sb.append("(");
-            visit(subquery.getSelect());
-            sb.append(")");
-            sb.append(" AS ");
-            sb.append(subquery.getName() + "_" + ref++);
-        }
+        sb.append(join.getTable().getName());
         if (join.getOnClause() != null) {
             sb.append(" ON ");
             visit(join.getOnClause());
