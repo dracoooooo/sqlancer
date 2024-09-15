@@ -252,7 +252,7 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
         MySQLAggregate.MySQLAggregateFunction function = MySQLAggregate.MySQLAggregateFunction.getRandom();
 
         if (function == MySQLAggregate.MySQLAggregateFunction.COUNT && Randomly.getBoolean()) {
-            // COUNT(*) 的特殊情况
+            // COUNT(*)
             return new MySQLAggregate(function, null, true);
         } else {
             MySQLExpression expr = generateExpression(type, 0);
@@ -279,6 +279,29 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
         MySQLSelect subquery = MySQLRandomQuerySynthesizer.generateTypedSingleColumnWithoutSkipAndLimit(globalState, type);
 
         return new MySQLSubqueryComparisonOperation(leftExpression, comparisonOperator, subqueryOperator, subquery);
+    }
+
+    public  MySQLExpression generateJoin(MySQLGlobalState globalState) {
+        MySQLSchema.MySQLEdge edge = globalState.getSchema().getRandomEdge();
+        MySQLSchema.MySQLTable leftTable = edge.getSourceTable();
+        MySQLSchema.MySQLTable rightTable = edge.getTargetTable();
+        MySQLSchema.MySQLColumn leftColumn = edge.getSourceColumn();
+        MySQLSchema.MySQLColumn rightColumn = edge.getTargetColumn();
+
+        MySQLJoin.JoinType joinType = Randomly.fromOptions(MySQLJoin.JoinType.values());
+
+        MySQLExpression onClause = null;
+        if (joinType != MySQLJoin.JoinType.NATURAL) {
+            onClause = new MySQLBinaryComparisonOperation(
+                    new MySQLColumnReference(leftColumn,null),
+                    new MySQLColumnReference(rightColumn,null),
+                    MySQLBinaryComparisonOperation.BinaryComparisonOperator.EQUALS
+            );
+        }
+
+        MySQLSchema.MySQLTable joinTable = Randomly.fromOptions(leftTable, rightTable);
+        return new MySQLJoin(joinTable, onClause, joinType);
+
     }
 
 

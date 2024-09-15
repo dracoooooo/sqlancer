@@ -25,6 +25,7 @@ import sqlancer.mysql.ast.MySQLConstant;
 public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
 
     private static final int NR_SCHEMA_READ_TRIES = 10;
+    private List<MySQLEdge> edges;
 
     public enum MySQLDataType {
         BOOLEAN, INT, VARCHAR, FLOAT, DOUBLE, DECIMAL;
@@ -39,16 +40,16 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
 
         public boolean isNumeric() {
             switch (this) {
-            case BOOLEAN:
-            case INT:
-            case DOUBLE:
-            case FLOAT:
-            case DECIMAL:
-                return true;
-            case VARCHAR:
-                return false;
-            default:
-                throw new AssertionError(this);
+                case BOOLEAN:
+                case INT:
+                case DOUBLE:
+                case FLOAT:
+                case DECIMAL:
+                    return true;
+                case VARCHAR:
+                    return false;
+                default:
+                    throw new AssertionError(this);
             }
         }
 
@@ -58,6 +59,7 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
 
         private final boolean isPrimaryKey;
         private final int precision;
+        private final String exactType; // the exact type information
 
         public enum CollateSequence {
             NOCASE, RTRIM, BINARY;
@@ -67,8 +69,9 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
             }
         }
 
-        public MySQLColumn(String name, MySQLDataType columnType, boolean isPrimaryKey, int precision) {
+        public MySQLColumn(String name, MySQLDataType columnType, String exactType, boolean isPrimaryKey, int precision) {
             super(name, null, columnType);
+            this.exactType = exactType;
             this.isPrimaryKey = isPrimaryKey;
             this.precision = precision;
         }
@@ -81,6 +84,13 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
             return isPrimaryKey;
         }
 
+        public String getExactType() {
+            return exactType;
+        }
+
+        public boolean canBeUsedAsFK() {
+            return getType() != MySQLDataType.VARCHAR || !exactType.toLowerCase().contains("text");
+        }
     }
 
     public static class MySQLTables extends AbstractTables<MySQLTable, MySQLColumn> {
@@ -91,7 +101,7 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
 
         public MySQLRowValue getRandomRowValue(SQLConnection con) throws SQLException {
             String randomRow = String.format("SELECT %s FROM %s ORDER BY RAND() LIMIT 1", columnNamesAsString(
-                    c -> c.getTable().getName() + "." + c.getName() + " AS " + c.getTable().getName() + c.getName()),
+                            c -> c.getTable().getName() + "." + c.getName() + " AS " + c.getTable().getName() + c.getName()),
                     // columnNamesAsString(c -> "typeof(" + c.getTable().getName() + "." +
                     // c.getName() + ")")
                     tableNamesAsString());
@@ -111,16 +121,16 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
                         constant = MySQLConstant.createNullConstant();
                     } else {
                         switch (column.getType()) {
-                        case INT:
-                            value = randomRowValues.getLong(columnIndex);
-                            constant = MySQLConstant.createIntConstant((long) value);
-                            break;
-                        case VARCHAR:
-                            value = randomRowValues.getString(columnIndex);
-                            constant = MySQLConstant.createStringConstant((String) value);
-                            break;
-                        default:
-                            throw new AssertionError(column.getType());
+                            case INT:
+                                value = randomRowValues.getLong(columnIndex);
+                                constant = MySQLConstant.createIntConstant((long) value);
+                                break;
+                            case VARCHAR:
+                                value = randomRowValues.getString(columnIndex);
+                                constant = MySQLConstant.createStringConstant((String) value);
+                                break;
+                            default:
+                                throw new AssertionError(column.getType());
                         }
                     }
                     values.put(column, constant);
@@ -135,26 +145,26 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
 
     private static MySQLDataType getColumnType(String typeString) {
         switch (typeString) {
-        case "tinyint":
-        case "smallint":
-        case "mediumint":
-        case "int":
-        case "bigint":
-            return MySQLDataType.INT;
-        case "varchar":
-        case "tinytext":
-        case "mediumtext":
-        case "text":
-        case "longtext":
-            return MySQLDataType.VARCHAR;
-        case "double":
-            return MySQLDataType.DOUBLE;
-        case "float":
-            return MySQLDataType.FLOAT;
-        case "decimal":
-            return MySQLDataType.DECIMAL;
-        default:
-            throw new AssertionError(typeString);
+            case "tinyint":
+            case "smallint":
+            case "mediumint":
+            case "int":
+            case "bigint":
+                return MySQLDataType.INT;
+            case "varchar":
+            case "tinytext":
+            case "mediumtext":
+            case "text":
+            case "longtext":
+                return MySQLDataType.VARCHAR;
+            case "double":
+                return MySQLDataType.DOUBLE;
+            case "float":
+                return MySQLDataType.FLOAT;
+            case "decimal":
+                return MySQLDataType.DECIMAL;
+            default:
+                throw new AssertionError(typeString);
         }
     }
 
@@ -199,6 +209,14 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
             return getColumns().stream().anyMatch(c -> c.isPrimaryKey());
         }
 
+        public MySQLColumn getPrimaryKey() {
+            if (hasPrimaryKey()) {
+                return getColumns().stream().filter(c -> c.isPrimaryKey()).findAny().get();
+            } else {
+                return null;
+            }
+        }
+
     }
 
     public static final class MySQLIndex extends TableIndex {
@@ -220,6 +238,37 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
             }
         }
 
+    }
+
+    public static class MySQLEdge {
+        private final MySQLTable sourceTable;
+        private final MySQLColumn sourceColumn;
+        private final MySQLTable targetTable;
+        private final MySQLColumn targetColumn;
+
+        public MySQLEdge(MySQLTable sourceTable, MySQLColumn sourceColumn,
+                         MySQLTable targetTable, MySQLColumn targetColumn) {
+            this.sourceTable = sourceTable;
+            this.sourceColumn = sourceColumn;
+            this.targetTable = targetTable;
+            this.targetColumn = targetColumn;
+        }
+
+        public MySQLTable getSourceTable() {
+            return sourceTable;
+        }
+
+        public MySQLColumn getSourceColumn() {
+            return sourceColumn;
+        }
+
+        public MySQLTable getTargetTable() {
+            return targetTable;
+        }
+
+        public MySQLColumn getTargetColumn() {
+            return targetColumn;
+        }
     }
 
     public static MySQLSchema fromConnection(SQLConnection con, String databaseName) throws SQLException {
@@ -246,12 +295,61 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
                         }
                     }
                 }
-                return new MySQLSchema(databaseTables);
+                List<MySQLEdge> edges = fromConnectionGetEdges(con, databaseName, databaseTables);
+                return new MySQLSchema(databaseTables, edges);
             } catch (SQLIntegrityConstraintViolationException e) {
                 ex = e;
             }
         }
+
         throw new AssertionError(ex);
+    }
+
+    private static List<MySQLEdge> fromConnectionGetEdges(SQLConnection con, String databaseName,
+                                                          List<MySQLTable> tables) throws SQLException {
+        List<MySQLEdge> edges = new ArrayList<>();
+        try (Statement s = con.createStatement()) {
+            String query = "select TABLE_NAME, COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME " +
+                    "from information_schema.KEY_COLUMN_USAGE " +
+                    "where REFERENCED_TABLE_SCHEMA = '" + databaseName + "' " +
+                    "and REFERENCED_TABLE_NAME is not null";
+
+            try (ResultSet rs = s.executeQuery(query)) {
+                while (rs.next()) {
+                    String sourceTableName = rs.getString("TABLE_NAME");
+                    String sourceColumnName = rs.getString("COLUMN_NAME");
+                    String targetTableName = rs.getString("REFERENCED_TABLE_NAME");
+                    String targetColumnName = rs.getString("REFERENCED_COLUMN_NAME");
+
+                    MySQLTable sourceTable = findTable(tables, sourceTableName);
+                    MySQLTable targetTable = findTable(tables, targetTableName);
+
+                    if (sourceTable != null && targetTable != null) {
+                        MySQLColumn sourceColumn = findColumn(sourceTable, sourceColumnName);
+                        MySQLColumn targetColumn = findColumn(targetTable, targetColumnName);
+
+                        if (sourceColumn != null && targetColumn != null) {
+                            edges.add(new MySQLEdge(sourceTable, sourceColumn, targetTable, targetColumn));
+                        }
+                    }
+                }
+            }
+        }
+        return edges;
+    }
+
+    private static MySQLTable findTable(List<MySQLTable> tables, String tableName) {
+        return tables.stream()
+                .filter(t -> t.getName().equals(tableName))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private static MySQLColumn findColumn(MySQLTable table, String columnName) {
+        return table.getColumns().stream()
+                .filter(c -> c.getName().equals(columnName))
+                .findFirst()
+                .orElse(null);
     }
 
     private static List<MySQLIndex> getIndexes(SQLConnection con, String tableName, String databaseName)
@@ -279,9 +377,10 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
                 while (rs.next()) {
                     String columnName = rs.getString("COLUMN_NAME");
                     String dataType = rs.getString("DATA_TYPE");
+                    String columnType = rs.getString("COLUMN_TYPE"); // 获取确切的类型信息
                     int precision = rs.getInt("NUMERIC_PRECISION");
                     boolean isPrimaryKey = rs.getString("COLUMN_KEY").equals("PRI");
-                    MySQLColumn c = new MySQLColumn(columnName, getColumnType(dataType), isPrimaryKey, precision);
+                    MySQLColumn c = new MySQLColumn(columnName, getColumnType(dataType), columnType, isPrimaryKey, precision);
                     columns.add(c);
                 }
             }
@@ -293,8 +392,73 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
         super(databaseTables);
     }
 
+    public MySQLSchema(List<MySQLTable> databaseTables, List<MySQLEdge> edges) {
+        super(databaseTables);
+        this.edges = edges;
+    }
+
+    public List<MySQLEdge> getEdges() {
+        return edges;
+    }
+
+    public MySQLEdge getRandomEdge() {
+        if(edges.isEmpty()) {
+            return null;
+        }
+        return Randomly.fromList(edges);
+    }
+
     public MySQLTables getRandomTableNonEmptyTables() {
         return new MySQLTables(Randomly.nonEmptySubset(getDatabaseTables()));
     }
+
+    public MySQLTable getTableByName(String tableName) {
+        return getDatabaseTables().stream().filter(t -> t.getName().contentEquals(tableName)).findAny().get();
+    }
+
+    /**
+     * determine if a table can be referenced
+     *
+     * @param table table to be checked
+     * @return true if the table can be referenced, otherwise false
+     */
+    public boolean canBeReferencedTable(MySQLTable table) {
+        // check for primary key
+        boolean hasPrimaryKey = table.getColumns().stream().anyMatch(MySQLColumn::isPrimaryKey);
+
+        // check for referencable column
+        boolean hasReferencableColumn = table.getColumns().stream().anyMatch(this::canBeReferencedColumn);
+
+        return hasPrimaryKey && hasReferencableColumn;
+    }
+
+    /**
+     * determine if a column can be referenced
+     *
+     * @param column column to be checked
+     * @return true if the column can be referenced, otherwise false
+     */
+    public boolean canBeReferencedColumn(MySQLColumn column) {
+        // check for primary key
+        if (!column.isPrimaryKey()) {
+            return false;
+        }
+
+        // check for column type
+        if (column.getType() == MySQLDataType.VARCHAR) {
+            // exclude TEXT type
+            if (column.getExactType().toLowerCase().contains("text")) {
+                return false;
+            }
+        }
+
+        // exclude BLOB type
+        if (column.getExactType().toLowerCase().contains("blob")) {
+            return false;
+        }
+
+        return true;
+    }
+
 
 }

@@ -74,10 +74,11 @@ public final class MySQLRandomQuerySynthesizer {
                 .map(MySQLTableReference::new).collect(Collectors.toList());
         List<MySQLExpression> updatedTableList = MySQLCommon.getTableReferences(tableList);
 
-        // TODO: support join later
-//        if (Randomly.getBoolean()) {
-//            select.setJoinList(MySQLJoin.getRandomJoinClauses(tables.getTables(), globalState));
-//        }
+        if (Randomly.getBoolean()&&globalState.getSchema().getRandomEdge()!=null) {
+            List<MySQLExpression> joinStatement = new ArrayList<>();
+            joinStatement.add(gen.generateJoin(globalState));
+            select.setJoinList(joinStatement);
+        }
 
         select.setFromList(updatedTableList);
 //        if (Randomly.getBoolean()) {

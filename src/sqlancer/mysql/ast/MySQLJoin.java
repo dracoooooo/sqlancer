@@ -17,25 +17,24 @@ public class MySQLJoin implements MySQLExpression {
         NATURAL, INNER, STRAIGHT, LEFT, RIGHT, CROSS;
     }
 
-    private final MySQLFromItem joinItem;//被连接的item,包含表或者子查询的结果
-    private MySQLExpression onClause;//连接条件
-    private JoinType type;//连接类型
+    private final MySQLTable table;
+    private MySQLExpression onClause;
+    private JoinType type;
 
     public MySQLJoin(MySQLJoin other) {
-        this.joinItem = other.joinItem;
+        this.table = other.table;
         this.onClause = other.onClause;
         this.type = other.type;
     }
 
-    public MySQLJoin(MySQLFromItem joinItem, MySQLExpression onClause, JoinType type) {
-        this.joinItem = joinItem;
+    public MySQLJoin(MySQLTable table, MySQLExpression onClause, JoinType type) {
+        this.table = table;
         this.onClause = onClause;
         this.type = type;
-
     }
 
-    public MySQLFromItem getJoinItem() {
-        return joinItem;
+    public MySQLTable getTable() {
+        return table;
     }
 
     public MySQLExpression getOnClause() {
@@ -67,46 +66,24 @@ public class MySQLJoin implements MySQLExpression {
                 options.remove(JoinType.NATURAL);
             }
             for (int i = 0; i < nrJoinClauses; i++) {
-                MySQLFromItem joinItem = getRandomFromItem(tables, globalState);
-                if(joinItem instanceof MySQLTableReference) {
-                    MySQLTableReference tableReference = (MySQLTableReference) joinItem;
-                    MySQLTable table = tableReference.getTable();
-                    //remove the joined table from tables
-                    tables.remove(table);
-                    columns.addAll(table.getColumns());
-                }
+                MySQLTable table = Randomly.fromList(tables);
+                tables.remove(table);
+                columns.addAll(table.getColumns());
                 MySQLTypedExpressionGenerator joinGen = new MySQLTypedExpressionGenerator(globalState).setColumns(columns);
                 MySQLExpression joinClause = joinGen.generateExpression(MySQLSchema.MySQLDataType.BOOLEAN);
                 JoinType selectedOption = Randomly.fromList(options);
                 if (selectedOption == JoinType.NATURAL) {
+                    // NATURAL joins do not have an ON clause
                     joinClause = null;
                 }
-
-                MySQLJoin j = new MySQLJoin(joinItem, joinClause, selectedOption);
+                MySQLJoin j = new MySQLJoin(table, joinClause, selectedOption);
                 joinStatements.add(j);
             }
-        }
 
+        }
         return joinStatements;
     }
 
 
-    private static MySQLFromItem getRandomFromItem(List<MySQLTable> tables, MySQLGlobalState globalState) {
-        if (Randomly.getBoolean()) {
-            // return a table
-            return new MySQLTableReference(Randomly.fromList(tables));
-        } else {
-            // return a subquery
-            return generateSubquery(tables, globalState);
-        }
-    }
 
-    private static MySQLSubquery generateSubquery(List<MySQLTable> tables, MySQLGlobalState globalState) {
-        MySQLSelect subquerySelect = new MySQLSelect();
-        // todo
-        // subquerySelect.setFromList(...);
-        // subquerySelect.setSelectItems(...);
-        // subquerySelect.setWhereClause(...);
-        return new MySQLSubquery(subquerySelect);
-    }
 }
