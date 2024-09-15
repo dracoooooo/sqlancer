@@ -73,7 +73,7 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
         int nrColumns = Randomly.smallNumber() + 1; // randomly generate a number between 1 and 5 of columns to select
 
         MySQLSelect subquery;
-        subquery = MySQLRandomQuerySynthesizer.generateTyped(globalState, nrColumns);
+        subquery = MySQLRandomQuerySynthesizer.generateTyped(globalState, nrColumns, false);
 
         boolean isNegated = Randomly.getBoolean();
         MySQLExpression existsExpression = new MySQLExists(subquery);
