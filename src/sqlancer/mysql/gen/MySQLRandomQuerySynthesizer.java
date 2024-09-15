@@ -49,7 +49,7 @@ public final class MySQLRandomQuerySynthesizer {
         return select;
     }
 
-    public static MySQLSelect generateTyped(MySQLGlobalState globalState, int nrColumns) {
+    public static MySQLSelect generateTyped(MySQLGlobalState globalState, int nrColumns, boolean addSkipAndLimit) {
         MySQLTables tables = globalState.getSchema().getRandomTableNonEmptyTables();
         MySQLTypedExpressionGenerator gen = new MySQLTypedExpressionGenerator(globalState).setColumns(tables.getColumns());
         MySQLSelect select = new MySQLSelect();
@@ -95,17 +95,18 @@ public final class MySQLRandomQuerySynthesizer {
 //                select.setHavingClause(gen.generateHavingClause());
 //            }
 //        }
-
-        if (Randomly.getBoolean()) {
-            select.setLimitClause(MySQLConstant.createIntConstant(Randomly.getPositiveOrZeroNonCachedInteger()));
+        if (addSkipAndLimit) {
             if (Randomly.getBoolean()) {
-                select.setOffsetClause(MySQLConstant.createIntConstant(Randomly.getPositiveOrZeroNonCachedInteger()));
+                select.setLimitClause(MySQLConstant.createIntConstant(Randomly.getPositiveOrZeroNonCachedInteger()));
+                if (Randomly.getBoolean()) {
+                    select.setOffsetClause(MySQLConstant.createIntConstant(Randomly.getPositiveOrZeroNonCachedInteger()));
+                }
             }
         }
         return select;
     }
 
-    public static MySQLSelect generateTypedSingleColumn(MySQLGlobalState globalState, MySQLSchema.MySQLDataType requiredType) {
+    public static MySQLSelect generateTypedSingleColumnWithoutSkipAndLimit(MySQLGlobalState globalState, MySQLSchema.MySQLDataType requiredType) {
         MySQLTables tables = globalState.getSchema().getRandomTableNonEmptyTables();
         MySQLTypedExpressionGenerator gen = new MySQLTypedExpressionGenerator(globalState).setColumns(tables.getColumns());
         MySQLSelect select = new MySQLSelect();
@@ -123,16 +124,16 @@ public final class MySQLRandomQuerySynthesizer {
             select.setWhereClause(gen.generateExpression(MySQLSchema.MySQLDataType.BOOLEAN));
         }
 
-        if (Randomly.getBooleanWithRatherLowProbability()) {
-            select.setOrderByClauses(gen.generateOrderBys());
-        }
+//        if (Randomly.getBooleanWithRatherLowProbability()) {
+//            select.setOrderByClauses(gen.generateOrderBys());
+//        }
 
-        if (Randomly.getBoolean()) {
-            select.setLimitClause(MySQLConstant.createIntConstant(Randomly.getPositiveOrZeroNonCachedInteger()));
-            if (Randomly.getBoolean()) {
-                select.setOffsetClause(MySQLConstant.createIntConstant(Randomly.getPositiveOrZeroNonCachedInteger()));
-            }
-        }
+//        if (Randomly.getBoolean()) {
+//            select.setLimitClause(MySQLConstant.createIntConstant(Randomly.getPositiveOrZeroNonCachedInteger()));
+//            if (Randomly.getBoolean()) {
+//                select.setOffsetClause(MySQLConstant.createIntConstant(Randomly.getPositiveOrZeroNonCachedInteger()));
+//            }
+//        }
 
         return select;
     }

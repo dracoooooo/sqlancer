@@ -166,27 +166,28 @@ public class MySQLSetGenerator {
     private SQLQueryAdapter get() {
         sb.append("SET ");
         Action a;
-        if (isSingleThreaded) {
-            a = Randomly.fromOptions(Action.values());
-            Scope[] scopes = a.getScopes();
-            Scope randomScope = Randomly.fromOptions(scopes);
-            switch (randomScope) {
-            case GLOBAL:
-                sb.append("GLOBAL");
-                break;
-            case SESSION:
-                sb.append("SESSION");
-                break;
-            default:
-                throw new AssertionError(randomScope);
-            }
-
-        } else {
+        // Temporarily use only Scope.SESSION
+//        if (isSingleThreaded) {
+//            a = Randomly.fromOptions(Action.values());
+//            Scope[] scopes = a.getScopes();
+//            Scope randomScope = Randomly.fromOptions(scopes);
+//            switch (randomScope) {
+//            case GLOBAL:
+//                sb.append("GLOBAL");
+//                break;
+//            case SESSION:
+//                sb.append("SESSION");
+//                break;
+//            default:
+//                throw new AssertionError(randomScope);
+//            }
+//
+//        } else {
             do {
                 a = Randomly.fromOptions(Action.values());
             } while (!a.canBeUsedInScope(Scope.SESSION));
             sb.append("SESSION");
-        }
+//        }
         sb.append(" ");
         sb.append(a.name);
         sb.append(" = ");

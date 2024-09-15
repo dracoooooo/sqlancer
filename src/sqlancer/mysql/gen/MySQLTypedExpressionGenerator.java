@@ -73,7 +73,7 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
         int nrColumns = Randomly.smallNumber() + 1; // randomly generate a number between 1 and 5 of columns to select
 
         MySQLSelect subquery;
-        subquery = MySQLRandomQuerySynthesizer.generateTyped(globalState, nrColumns);
+        subquery = MySQLRandomQuerySynthesizer.generateTyped(globalState, nrColumns, false);
 
         boolean isNegated = Randomly.getBoolean();
         MySQLExpression existsExpression = new MySQLExists(subquery);
@@ -252,7 +252,7 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
         MySQLAggregate.MySQLAggregateFunction function = MySQLAggregate.MySQLAggregateFunction.getRandom();
 
         if (function == MySQLAggregate.MySQLAggregateFunction.COUNT && Randomly.getBoolean()) {
-            // COUNT(*)
+            // COUNT(*) 的特殊情况
             return new MySQLAggregate(function, null, true);
         } else {
             MySQLExpression expr = generateExpression(type, 0);
@@ -276,7 +276,7 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
         MySQLSubqueryComparisonOperation.SubqueryComparisonOperator subqueryOperator = MySQLSubqueryComparisonOperation.SubqueryComparisonOperator.getRandom();
 
         // Generate a subquery that returns a single column of the same type
-        MySQLSelect subquery = MySQLRandomQuerySynthesizer.generateTypedSingleColumn(globalState, type);
+        MySQLSelect subquery = MySQLRandomQuerySynthesizer.generateTypedSingleColumnWithoutSkipAndLimit(globalState, type);
 
         return new MySQLSubqueryComparisonOperation(leftExpression, comparisonOperator, subqueryOperator, subquery);
     }

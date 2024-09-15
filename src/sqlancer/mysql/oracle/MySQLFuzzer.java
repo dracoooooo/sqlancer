@@ -17,7 +17,7 @@ public class MySQLFuzzer implements TestOracle<MySQLGlobalState> {
 
     @Override
     public void check() throws Exception {
-        String s = MySQLVisitor.asString(MySQLRandomQuerySynthesizer.generateTyped(globalState, Randomly.smallNumber() + 1))
+        String s = MySQLVisitor.asString(MySQLRandomQuerySynthesizer.generateTyped(globalState, Randomly.smallNumber() + 1, true))
                 + ';';
 //        System.out.println(s);
         try {
