@@ -139,18 +139,43 @@ public class MySQLProvider extends SQLProviderAdapter<MySQLGlobalState, MySQLOpt
         return nrPerformed;
     }
 
+    private void createTable(MySQLGlobalState globalState, String tableName) {
+        while (true) {
+            try {
+                SQLQueryAdapter createTable = MySQLTableGenerator.generate(globalState, tableName,true);
+                if (!globalState.executeStatement(createTable)) {
+                    continue;
+                }
+                break;
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private void createTableWithForeignKey(MySQLGlobalState globalState, MySQLTable referencedTable, String tableName) {
+        while (true) {
+            try {
+                SQLQueryAdapter createTable = MySQLTableGenerator.generateWithForeignKey(globalState, tableName,  referencedTable,true);
+                if (!globalState.executeStatement(createTable)) {
+                    continue;
+                }
+                break;
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
     @Override
     public void generateDatabase(MySQLGlobalState globalState) throws Exception {
         List<MySQLTable> tables = new ArrayList<>();
 
         // generate the first table without foreign keys
         String tableName = DBMSCommon.createTableName(0);
-        SQLQueryAdapter createTable = MySQLTableGenerator.generate(globalState, tableName,true);
-        globalState.executeStatement(createTable);
+        createTable(globalState, tableName);
         tables.add(globalState.getSchema().getTableByName(tableName));
 
         // generate the remaining tables with foreign keys
-        while (globalState.getSchema().getDatabaseTables().size() < Randomly.getNotCachedInteger(3, 4)) {
+        while (globalState.getSchema().getDatabaseTables().size() < Randomly.getNotCachedInteger(6, 10)) {
             tableName = DBMSCommon.createTableName(globalState.getSchema().getDatabaseTables().size());
             MySQLTable referencedTable = null;
             for (MySQLTable table : tables) {
@@ -161,13 +186,11 @@ public class MySQLProvider extends SQLProviderAdapter<MySQLGlobalState, MySQLOpt
             }
             if (referencedTable != null) {
                 // create a table with a foreign key to an existing table
-                createTable = MySQLTableGenerator.generateWithForeignKey(globalState, tableName, referencedTable,true);
-                globalState.executeStatement(createTable);
+                createTableWithForeignKey(globalState, referencedTable, tableName);
                 tables.add(globalState.getSchema().getTableByName(tableName));
             } else {
                 // create a table without foreign key
-                createTable = MySQLTableGenerator.generate(globalState, tableName,true);
-                globalState.executeStatement(createTable);
+                createTable(globalState, tableName);
                 tables.add(globalState.getSchema().getTableByName(tableName));
             }
         }
@@ -178,7 +201,10 @@ public class MySQLProvider extends SQLProviderAdapter<MySQLGlobalState, MySQLOpt
                 throw new IgnoreMeException();
             }
         });
-        se.executeStatements();
+        try {
+            se.executeStatements();
+        } catch (Exception ignored) {
+        }
         globalState.getLogger().writeCurrent("-- Database Generation finished");
     }
 

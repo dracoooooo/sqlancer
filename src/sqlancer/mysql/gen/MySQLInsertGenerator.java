@@ -1,17 +1,22 @@
 package sqlancer.mysql.gen;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
+import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.mysql.cj.exceptions.AssertionFailedException;
 import sqlancer.Randomly;
 import sqlancer.common.query.ExpectedErrors;
 import sqlancer.common.query.SQLQueryAdapter;
-import sqlancer.mysql.MySQLErrors;
-import sqlancer.mysql.MySQLGlobalState;
+import sqlancer.mysql.*;
 import sqlancer.mysql.MySQLSchema.MySQLColumn;
 import sqlancer.mysql.MySQLSchema.MySQLTable;
-import sqlancer.mysql.MySQLVisitor;
+import sqlancer.mysql.ast.MySQLConstant;
+import sqlancer.mysql.ast.MySQLExpression;
 
 public class MySQLInsertGenerator {
 
@@ -68,7 +73,7 @@ public class MySQLInsertGenerator {
         sb.append(columns.stream().map(c -> c.getName()).collect(Collectors.joining(", ")));
         sb.append(") ");
         sb.append("VALUES");
-        MySQLUntypedExpressionGenerator gen = new MySQLUntypedExpressionGenerator(globalState);
+        MySQLTypedExpressionGenerator gen = new MySQLTypedExpressionGenerator(globalState);
         int nrRows;
         if (Randomly.getBoolean()) {
             nrRows = 1;
@@ -84,13 +89,42 @@ public class MySQLInsertGenerator {
                 if (c != 0) {
                     sb.append(", ");
                 }
-                sb.append(MySQLVisitor.asString(gen.generateConstant()));
+                var col = columns.get(c);
+                if (col.isForeignKey()) {
+                    // Select a random value from the referenced table if the col is a foreign key
+                    sb.append(MySQLVisitor.asString(getRandomFromPrimaryKey(col.getRefColumn())));
+                } else {
+                    sb.append(MySQLVisitor.asString(gen.generateConstant(columns.get(c).getType())));
+                }
 
             }
             sb.append(")");
         }
         MySQLErrors.addInsertUpdateErrors(errors);
         return new SQLQueryAdapter(sb.toString(), errors);
+    }
+
+    private MySQLExpression getRandomFromPrimaryKey(MySQLColumn column) {
+        if (!column.isPrimaryKey()) {
+            throw new AssertionError();
+        }
+        var tableName = column.getTable().getName();
+        var primaryKey = column.getName();
+
+        var con = globalState.getConnection();
+        try (Statement s = con.createStatement()) {
+            // SELECT a random primary row from the table
+            try (ResultSet rs = s.executeQuery(String.format("SELECT %s FROM %s ORDER BY RAND() LIMIT 1", primaryKey, tableName))) {
+                if (rs.next()) {
+                    var val = rs.getObject(primaryKey);
+                    return MySQLCommon.convertObjectToExpression(val, column.getType());
+                } else {
+                    return new MySQLConstant.MySQLNullConstant();
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }

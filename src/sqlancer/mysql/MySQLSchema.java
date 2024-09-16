@@ -58,6 +58,8 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
     public static class MySQLColumn extends AbstractTableColumn<MySQLTable, MySQLDataType> {
 
         private final boolean isPrimaryKey;
+        private boolean isForeignKey;
+        private MySQLColumn refColumn;
         private final int precision;
         private final String exactType; // the exact type information
 
@@ -69,7 +71,7 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
             }
         }
 
-        public MySQLColumn(String name, MySQLDataType columnType, String exactType, boolean isPrimaryKey, int precision) {
+        public MySQLColumn(String name, MySQLDataType columnType, String exactType,  boolean isPrimaryKey, int precision) {
             super(name, null, columnType);
             this.exactType = exactType;
             this.isPrimaryKey = isPrimaryKey;
@@ -82,6 +84,19 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
 
         public boolean isPrimaryKey() {
             return isPrimaryKey;
+        }
+
+        public void setForeignKey(boolean isForeignKey, MySQLColumn refColumn) {
+            this.isForeignKey = isForeignKey;
+            this.refColumn = refColumn;
+        }
+
+        public boolean isForeignKey() {
+            return isForeignKey;
+        }
+
+        public MySQLColumn getRefColumn() {
+            return refColumn;
         }
 
         public String getExactType() {
@@ -241,6 +256,8 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
     }
 
     public static class MySQLEdge {
+        private static int COUNT = 0;
+        private final String name; // Just a name, used in translator
         private final MySQLTable sourceTable;
         private final MySQLColumn sourceColumn;
         private final MySQLTable targetTable;
@@ -248,6 +265,7 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
 
         public MySQLEdge(MySQLTable sourceTable, MySQLColumn sourceColumn,
                          MySQLTable targetTable, MySQLColumn targetColumn) {
+            this.name = "Relation" + COUNT++;
             this.sourceTable = sourceTable;
             this.sourceColumn = sourceColumn;
             this.targetTable = targetTable;
@@ -329,6 +347,7 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
                         MySQLColumn targetColumn = findColumn(targetTable, targetColumnName);
 
                         if (sourceColumn != null && targetColumn != null) {
+                            sourceColumn.setForeignKey(true, targetColumn);
                             edges.add(new MySQLEdge(sourceTable, sourceColumn, targetTable, targetColumn));
                         }
                     }
@@ -387,7 +406,6 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
         }
         return columns;
     }
-
     public MySQLSchema(List<MySQLTable> databaseTables) {
         super(databaseTables);
     }

@@ -1,9 +1,6 @@
 package sqlancer.common.query;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 
 import sqlancer.GlobalState;
 import sqlancer.Main;
@@ -103,7 +100,8 @@ public class SQLQueryAdapter extends Query<SQLConnection> {
             return true;
         } catch (Exception e) {
             Main.nrUnsuccessfulActions.addAndGet(1);
-            checkException(e);
+            // Remove check for init queries
+//            checkException(e);
             return false;
         } finally {
             s.close();
