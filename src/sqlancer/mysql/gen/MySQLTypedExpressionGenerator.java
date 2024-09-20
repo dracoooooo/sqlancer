@@ -9,6 +9,7 @@ import sqlancer.mysql.MySQLSchema;
 import sqlancer.mysql.ast.*;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -61,11 +62,63 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
 
     private enum BooleanExpression {
         NOT, IS_NULL, BINARY_LOGICAL_OPERATOR,
-        BINARY_COMPARISON_OPERATION, BETWEEN_OPERATOR,EXISTS,
+        BINARY_COMPARISON_OPERATION, BETWEEN_OPERATOR, EXISTS,
         SUBQUERY_COMPARISON_OPERATION
         // TODO
 //        COMPUTABLE_FUNCTION, CAST, IN_OPERATION, BINARY_OPERATION
     }
+
+    private enum MySQLFunction {
+        CHAR_LENGTH("CHAR_LENGTH", 1, MySQLSchema.MySQLDataType.INT),
+        LEFT("LEFT", 2, MySQLSchema.MySQLDataType.VARCHAR),
+        LOWER("LOWER", 1, MySQLSchema.MySQLDataType.VARCHAR),
+        LTRIM("LTRIM", 1, MySQLSchema.MySQLDataType.VARCHAR),
+        SUBSTRING("SUBSTRING", 3, MySQLSchema.MySQLDataType.VARCHAR),
+        ABS("ABS", 1, MySQLSchema.MySQLDataType.INT),
+        CEILING("CEILING", 1, MySQLSchema.MySQLDataType.FLOAT),
+        RAND("RAND", 0, MySQLSchema.MySQLDataType.FLOAT);
+
+        private final String name;
+        private final int argumentCount;
+        private final MySQLSchema.MySQLDataType returnType;
+
+        MySQLFunction(String name, int argumentCount, MySQLSchema.MySQLDataType returnType) {
+            this.name = name;
+            this.argumentCount = argumentCount;
+            this.returnType = returnType;
+        }
+    }
+
+    private MySQLExpression generateFunctionCall(MySQLFunction function, int depth) {
+        List<MySQLExpression> args = new ArrayList<>();
+
+        for (int i = 0; i < function.argumentCount; i++) {
+            MySQLSchema.MySQLDataType argType = getArgumentType(function, i);
+            args.add(generateExpression(argType, depth + 1));
+        }
+
+        return new MySQLFunctionCall(function.name, args);
+    }
+
+    private MySQLSchema.MySQLDataType getArgumentType(MySQLFunction function, int argIndex) {
+        switch (function) {
+            case CHAR_LENGTH:
+            case LOWER:
+            case LTRIM:
+                return MySQLSchema.MySQLDataType.VARCHAR;
+            case LEFT:
+                return argIndex == 0 ? MySQLSchema.MySQLDataType.VARCHAR : MySQLSchema.MySQLDataType.INT;
+            case SUBSTRING:
+                return argIndex == 0 ? MySQLSchema.MySQLDataType.VARCHAR : MySQLSchema.MySQLDataType.INT;
+            case ABS:
+                return MySQLSchema.MySQLDataType.INT;
+            case CEILING:
+                return MySQLSchema.MySQLDataType.FLOAT;
+            default:
+                throw new AssertionError("Unexpected function: " + function);
+        }
+    }
+
 
     private MySQLExpression getExists() {
 
@@ -192,6 +245,17 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
         if (depth >= globalState.getOptions().getMaxExpressionDepth()) {
             return generateLeafNode(type);
         }
+
+        if (Randomly.getBooleanWithRatherLowProbability()) {
+            ArrayList<MySQLFunction> functionsToBeChosen = new ArrayList<>(Arrays.stream(MySQLFunction.values())
+                    .filter(f -> f.returnType == type)
+                    .collect(Collectors.toList()));
+
+            if (!functionsToBeChosen.isEmpty()) {
+                MySQLFunction function = Randomly.fromList(functionsToBeChosen);
+                return generateFunctionCall(function, depth);
+            }
+        }
         // BOOLEAN, INT, VARCHAR, FLOAT, DOUBLE, DECIMAL;
         switch (type) {
             case BOOLEAN:
@@ -281,7 +345,7 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
         return new MySQLSubqueryComparisonOperation(leftExpression, comparisonOperator, subqueryOperator, subquery);
     }
 
-    public  MySQLExpression generateJoin(MySQLGlobalState globalState) {
+    public MySQLExpression generateJoin(MySQLGlobalState globalState) {
         MySQLSchema.MySQLEdge edge = globalState.getSchema().getRandomEdge();
         MySQLSchema.MySQLTable leftTable = edge.getSourceTable();
         MySQLSchema.MySQLTable rightTable = edge.getTargetTable();
@@ -293,8 +357,8 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
         MySQLExpression onClause = null;
         if (joinType != MySQLJoin.JoinType.NATURAL) {
             onClause = new MySQLBinaryComparisonOperation(
-                    new MySQLColumnReference(leftColumn,null),
-                    new MySQLColumnReference(rightColumn,null),
+                    new MySQLColumnReference(leftColumn, null),
+                    new MySQLColumnReference(rightColumn, null),
                     MySQLBinaryComparisonOperation.BinaryComparisonOperator.EQUALS
             );
         }

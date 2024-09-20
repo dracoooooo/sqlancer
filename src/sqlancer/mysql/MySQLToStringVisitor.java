@@ -342,4 +342,17 @@ public class MySQLToStringVisitor extends ToStringVisitor<MySQLExpression> imple
     public void visit(MySQLText text) {
         sb.append(text.getText());
     }
+
+    @Override
+    public void visit(MySQLFunctionCall functionCall) {
+        sb.append(functionCall.getFunctionName());
+        sb.append("(");
+        for (int i = 0; i < functionCall.getArguments().size(); i++) {
+            if (i != 0) {
+                sb.append(", ");
+            }
+            visit(functionCall.getArguments().get(i));
+        }
+        sb.append(")");
+    }
 }
