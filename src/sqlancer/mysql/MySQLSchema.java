@@ -396,10 +396,15 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
                 while (rs.next()) {
                     String columnName = rs.getString("COLUMN_NAME");
                     String dataType = rs.getString("DATA_TYPE");
-                    String columnType = rs.getString("COLUMN_TYPE"); // 获取确切的类型信息
+                    String exactColumnType = rs.getString("COLUMN_TYPE"); // Get exact type info
                     int precision = rs.getInt("NUMERIC_PRECISION");
                     boolean isPrimaryKey = rs.getString("COLUMN_KEY").equals("PRI");
-                    MySQLColumn c = new MySQLColumn(columnName, getColumnType(dataType), columnType, isPrimaryKey, precision);
+                    MySQLDataType columnType = getColumnType(dataType);
+                    // special handling for tinyint(1)
+                    if (exactColumnType.equals("tinyint(1)")) {
+                        columnType = MySQLDataType.BOOLEAN;
+                    }
+                    MySQLColumn c = new MySQLColumn(columnName, columnType, exactColumnType, isPrimaryKey, precision);
                     columns.add(c);
                 }
             }
