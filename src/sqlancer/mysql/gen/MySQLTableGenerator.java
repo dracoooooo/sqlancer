@@ -88,12 +88,12 @@ public class MySQLTableGenerator {
 
     }
 
-    public static SQLQueryAdapter generateWithForeignKey(MySQLGlobalState globalState, String tableName, MySQLSchema.MySQLTable referencedTable, boolean forcePrimaryKey) {
+    public static SQLQueryAdapter generateWithForeignKey(MySQLGlobalState globalState, String tableName, List<MySQLSchema.MySQLTable> referencedTables, boolean forcePrimaryKey) {
         MySQLTableGenerator generator = new MySQLTableGenerator(globalState, tableName, forcePrimaryKey);
-        return generator.createWithForeignKey(referencedTable);
+        return generator.createWithForeignKey(referencedTables);
     }
 
-    private SQLQueryAdapter createWithForeignKey(MySQLSchema.MySQLTable referencedTable) {
+    private SQLQueryAdapter createWithForeignKey(List<MySQLSchema.MySQLTable> referencedTables) {
         ExpectedErrors errors = new ExpectedErrors();
 
         sb.append("CREATE");
@@ -114,7 +114,10 @@ public class MySQLTableGenerator {
         }
 
         // generate foreign key column
-        if (referencedTable != null) {
+        while (!referencedTables.isEmpty()) {
+
+            MySQLSchema.MySQLTable referencedTable = Randomly.fromList(referencedTables);
+            referencedTables.remove(referencedTable);
 
             MySQLSchema.MySQLColumn referencedColumn = referencedTable.getPrimaryKey();
             String columnName = DBMSCommon.createColumnName(columns.size());
@@ -134,6 +137,10 @@ public class MySQLTableGenerator {
             sb.append("(");
             sb.append(referencedColumn.getName());
             sb.append(")");
+
+            if(Randomly.getBoolean()) {
+                break;
+            }
         }
 
         sb.append(")");

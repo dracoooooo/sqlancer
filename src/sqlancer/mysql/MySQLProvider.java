@@ -152,10 +152,10 @@ public class MySQLProvider extends SQLProviderAdapter<MySQLGlobalState, MySQLOpt
         }
     }
 
-    private void createTableWithForeignKey(MySQLGlobalState globalState, MySQLTable referencedTable, String tableName) {
+    private void createTableWithForeignKey(MySQLGlobalState globalState, List<MySQLTable> referencedTables, String tableName) {
         while (true) {
             try {
-                SQLQueryAdapter createTable = MySQLTableGenerator.generateWithForeignKey(globalState, tableName,  referencedTable,true);
+                SQLQueryAdapter createTable = MySQLTableGenerator.generateWithForeignKey(globalState, tableName,  referencedTables,true);
                 if (!globalState.executeStatement(createTable)) {
                     continue;
                 }
@@ -177,16 +177,15 @@ public class MySQLProvider extends SQLProviderAdapter<MySQLGlobalState, MySQLOpt
         // generate the remaining tables with foreign keys
         while (globalState.getSchema().getDatabaseTables().size() < Randomly.getNotCachedInteger(6, 10)) {
             tableName = DBMSCommon.createTableName(globalState.getSchema().getDatabaseTables().size());
-            MySQLTable referencedTable = null;
+            List<MySQLTable> referencedTables = new ArrayList<>();
             for (MySQLTable table : tables) {
                 if (globalState.getSchema().canBeReferencedTable(table)) {
-                    referencedTable = table;
-                    break;
+                    referencedTables.add(table);
                 }
             }
-            if (referencedTable != null) {
+            if (!referencedTables.isEmpty()) {
                 // create a table with a foreign key to an existing table
-                createTableWithForeignKey(globalState, referencedTable, tableName);
+                createTableWithForeignKey(globalState, referencedTables, tableName);
                 tables.add(globalState.getSchema().getTableByName(tableName));
             } else {
                 // create a table without foreign key
