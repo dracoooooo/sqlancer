@@ -133,11 +133,7 @@ public class MySQLToStringVisitor extends ToStringVisitor<MySQLExpression> imple
             sb.append("FALSE");
             break;
         case IS_NULL:
-            if (Randomly.getBoolean()) {
-                sb.append("UNKNOWN");
-            } else {
-                sb.append("NULL");
-            }
+            sb.append("NULL");
             break;
         case IS_TRUE:
             sb.append("TRUE");
@@ -299,6 +295,9 @@ public class MySQLToStringVisitor extends ToStringVisitor<MySQLExpression> imple
                 break;
             case CROSS:
                 sb.append("CROSS ");
+                break;
+            case FULL:
+                sb.append("FULL ");
                 break;
             default:
                 throw new AssertionError(join.getType());
