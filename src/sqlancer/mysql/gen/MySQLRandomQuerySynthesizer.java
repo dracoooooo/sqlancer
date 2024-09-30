@@ -68,7 +68,7 @@ public final class MySQLRandomQuerySynthesizer {
 
         MySQLTypedExpressionGenerator gen = new MySQLTypedExpressionGenerator(globalState).setColumns(tables.getColumns());
 
-        boolean allowAggregates = Randomly.getBooleanWithSmallProbability();
+        boolean allowAggregates = false;
 
         List<MySQLTableReference> tableList = tables.getTables().stream()
                 .map(MySQLTableReference::new).collect(Collectors.toList());
@@ -81,18 +81,15 @@ public final class MySQLRandomQuerySynthesizer {
         }
 
         List<MySQLExpression> columns = new ArrayList<>();
-        List<MySQLExpression> columnsWithoutAggregates = new ArrayList<>();
         for (int i = 0; i < nrColumns; i++) {
-            // TODO
-
-//            if (allowAggregates && Randomly.getBoolean()) {
-            MySQLExpression expression = gen.generateExpression(MySQLSchema.MySQLDataType.getRandom(globalState));
-            columns.add(expression);
-            columnsWithoutAggregates.add(expression);
-//            }
-//            else {
-//                columns.add(gen.generateAggregate());
-//            }
+            if (allowAggregates && Randomly.getBoolean()) {
+                // gen aggregate
+                columns.add(gen.generateAggregate());
+            }
+            else {
+                MySQLExpression expression = gen.generateExpression(MySQLSchema.MySQLDataType.getRandom(globalState));
+                columns.add(expression);
+            }
         }
         select.setFetchColumns(columns);
 

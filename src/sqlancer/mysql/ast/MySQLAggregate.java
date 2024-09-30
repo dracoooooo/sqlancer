@@ -38,5 +38,15 @@ public class MySQLAggregate implements MySQLExpression {
         }
     }
 
+    public MySQLAggregateFunction getFunction() {
+        return function;
+    }
 
+    public MySQLExpression getExpr() {
+        return expr;
+    }
+
+    public boolean isCountStar() {
+        return isCountStar;
+    }
 }

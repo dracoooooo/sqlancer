@@ -246,16 +246,16 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
             return generateLeafNode(type);
         }
 
-//        if (Randomly.getBooleanWithRatherLowProbability()) {
-//            ArrayList<MySQLFunction> functionsToBeChosen = new ArrayList<>(Arrays.stream(MySQLFunction.values())
-//                    .filter(f -> f.returnType == type)
-//                    .collect(Collectors.toList()));
-//
-//            if (!functionsToBeChosen.isEmpty()) {
-//                MySQLFunction function = Randomly.fromList(functionsToBeChosen);
-//                return generateFunctionCall(function, depth);
-//            }
-//        }
+        if (Randomly.getBooleanWithRatherLowProbability()) {
+            ArrayList<MySQLFunction> functionsToBeChosen = new ArrayList<>(Arrays.stream(MySQLFunction.values())
+                    .filter(f -> f.returnType == type)
+                    .collect(Collectors.toList()));
+
+            if (!functionsToBeChosen.isEmpty()) {
+                MySQLFunction function = Randomly.fromList(functionsToBeChosen);
+                return generateFunctionCall(function, depth);
+            }
+        }
         // BOOLEAN, INT, VARCHAR, FLOAT, DOUBLE, DECIMAL;
         switch (type) {
             case BOOLEAN:
@@ -316,7 +316,7 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
         MySQLAggregate.MySQLAggregateFunction function = MySQLAggregate.MySQLAggregateFunction.getRandom();
 
         if (function == MySQLAggregate.MySQLAggregateFunction.COUNT && Randomly.getBoolean()) {
-            // COUNT(*) 的特殊情况
+            // Special case for COUNT(*)
             return new MySQLAggregate(function, null, true);
         } else {
             MySQLExpression expr = generateExpression(type, 0);

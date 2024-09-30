@@ -355,4 +355,16 @@ public class MySQLToStringVisitor extends ToStringVisitor<MySQLExpression> imple
         }
         sb.append(")");
     }
+
+    @Override
+    public void visit(MySQLAggregate aggregate) {
+        sb.append(aggregate.getFunction());
+        sb.append("(");
+        if (aggregate.isCountStar()) {
+            sb.append("*");
+        } else {
+            visit(aggregate.getExpr());
+        }
+        sb.append(")");
+    }
 }
