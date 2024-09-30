@@ -276,6 +276,7 @@ public class MySQLToStringVisitor extends ToStringVisitor<MySQLExpression> imple
 
     @Override
     public void visit(MySQLJoin join) {
+        sb.append(join.getLeftTable().getName());
         sb.append(" ");
         switch (join.getType()) {
             case NATURAL:
@@ -303,7 +304,7 @@ public class MySQLToStringVisitor extends ToStringVisitor<MySQLExpression> imple
                 throw new AssertionError(join.getType());
         }
         sb.append("JOIN ");
-        sb.append(join.getTable().getName());
+        sb.append(join.getRightTable().getName());
         if (join.getOnClause() != null) {
             sb.append(" ON ");
             visit(join.getOnClause());

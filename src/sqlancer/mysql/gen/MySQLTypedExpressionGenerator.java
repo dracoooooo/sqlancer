@@ -246,16 +246,16 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
             return generateLeafNode(type);
         }
 
-        if (Randomly.getBooleanWithRatherLowProbability()) {
-            ArrayList<MySQLFunction> functionsToBeChosen = new ArrayList<>(Arrays.stream(MySQLFunction.values())
-                    .filter(f -> f.returnType == type)
-                    .collect(Collectors.toList()));
-
-            if (!functionsToBeChosen.isEmpty()) {
-                MySQLFunction function = Randomly.fromList(functionsToBeChosen);
-                return generateFunctionCall(function, depth);
-            }
-        }
+//        if (Randomly.getBooleanWithRatherLowProbability()) {
+//            ArrayList<MySQLFunction> functionsToBeChosen = new ArrayList<>(Arrays.stream(MySQLFunction.values())
+//                    .filter(f -> f.returnType == type)
+//                    .collect(Collectors.toList()));
+//
+//            if (!functionsToBeChosen.isEmpty()) {
+//                MySQLFunction function = Randomly.fromList(functionsToBeChosen);
+//                return generateFunctionCall(function, depth);
+//            }
+//        }
         // BOOLEAN, INT, VARCHAR, FLOAT, DOUBLE, DECIMAL;
         switch (type) {
             case BOOLEAN:
@@ -345,14 +345,14 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
         return new MySQLSubqueryComparisonOperation(leftExpression, comparisonOperator, subqueryOperator, subquery);
     }
 
-    public MySQLExpression generateJoin(MySQLGlobalState globalState) {
-        MySQLSchema.MySQLEdge edge = globalState.getSchema().getRandomEdge();
+    public static MySQLExpression generateJoin(MySQLSchema.MySQLEdge edge) {
         MySQLSchema.MySQLTable leftTable = edge.getSourceTable();
         MySQLSchema.MySQLTable rightTable = edge.getTargetTable();
         MySQLSchema.MySQLColumn leftColumn = edge.getSourceColumn();
         MySQLSchema.MySQLColumn rightColumn = edge.getTargetColumn();
 
-        MySQLJoin.JoinType joinType = Randomly.fromOptions(MySQLJoin.JoinType.values());
+        // todo: add left/right/full [outer] join
+        MySQLJoin.JoinType joinType = Randomly.fromOptions(MySQLJoin.JoinType.INNER);
 
         MySQLExpression onClause = null;
         if (joinType != MySQLJoin.JoinType.NATURAL) {
@@ -362,11 +362,6 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
                     MySQLBinaryComparisonOperation.BinaryComparisonOperator.EQUALS
             );
         }
-
-        MySQLSchema.MySQLTable joinTable = Randomly.fromOptions(leftTable, rightTable);
-        return new MySQLJoin(joinTable, onClause, joinType);
-
+        return new MySQLJoin(leftTable, rightTable, onClause, joinType);
     }
-
-
 }

@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static sqlancer.mysql.gen.MySQLTypedExpressionGenerator.generateJoin;
+
 public final class MySQLRandomQuerySynthesizer {
 
     private MySQLRandomQuerySynthesizer() {
@@ -50,37 +52,50 @@ public final class MySQLRandomQuerySynthesizer {
     }
 
     public static MySQLSelect generateTyped(MySQLGlobalState globalState, int nrColumns, boolean addSkipAndLimit) {
-        MySQLTables tables = globalState.getSchema().getRandomTableNonEmptyTables();
-        MySQLTypedExpressionGenerator gen = new MySQLTypedExpressionGenerator(globalState).setColumns(tables.getColumns());
         MySQLSelect select = new MySQLSelect();
+        // Choose a join or raw tables
+        MySQLTables tables;
+        var edge = globalState.getSchema().getRandomEdge();
+        if (Randomly.getBoolean() && edge != null) {
+            List<MySQLExpression> joinStatement = new ArrayList<>();
+            joinStatement.add(generateJoin(edge));
+            select.setJoinList(joinStatement);
+
+            tables = new MySQLTables(List.of(edge.getSourceTable(), edge.getTargetTable()));
+        } else {
+            tables = globalState.getSchema().getRandomTableNonEmptyTables();
+        }
+
+        MySQLTypedExpressionGenerator gen = new MySQLTypedExpressionGenerator(globalState).setColumns(tables.getColumns());
 
         boolean allowAggregates = Randomly.getBooleanWithSmallProbability();
+
+        List<MySQLTableReference> tableList = tables.getTables().stream()
+                .map(MySQLTableReference::new).collect(Collectors.toList());
+        List<MySQLExpression> updatedTableList = MySQLCommon.getTableReferences(tableList);
+
+        if (select.getJoinList().isEmpty()) {
+            select.setFromList(updatedTableList);
+        } else {
+            select.setFromList(new ArrayList<>());
+        }
+
         List<MySQLExpression> columns = new ArrayList<>();
         List<MySQLExpression> columnsWithoutAggregates = new ArrayList<>();
         for (int i = 0; i < nrColumns; i++) {
             // TODO
 
 //            if (allowAggregates && Randomly.getBoolean()) {
-                MySQLExpression expression = gen.generateExpression(MySQLSchema.MySQLDataType.getRandom(globalState));
-                columns.add(expression);
-                columnsWithoutAggregates.add(expression);
+            MySQLExpression expression = gen.generateExpression(MySQLSchema.MySQLDataType.getRandom(globalState));
+            columns.add(expression);
+            columnsWithoutAggregates.add(expression);
 //            }
 //            else {
 //                columns.add(gen.generateAggregate());
 //            }
         }
         select.setFetchColumns(columns);
-        List<MySQLTableReference> tableList = tables.getTables().stream()
-                .map(MySQLTableReference::new).collect(Collectors.toList());
-        List<MySQLExpression> updatedTableList = MySQLCommon.getTableReferences(tableList);
 
-        if (Randomly.getBoolean()&&globalState.getSchema().getRandomEdge()!=null) {
-            List<MySQLExpression> joinStatement = new ArrayList<>();
-            joinStatement.add(gen.generateJoin(globalState));
-            select.setJoinList(joinStatement);
-        }
-
-        select.setFromList(updatedTableList);
 //        if (Randomly.getBoolean()) {
             select.setWhereClause(gen.generateExpression(MySQLSchema.MySQLDataType.BOOLEAN));
 //        }

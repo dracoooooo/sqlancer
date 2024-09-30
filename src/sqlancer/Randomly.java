@@ -214,7 +214,7 @@ public final class Randomly {
 
     public long getInteger() {
         if (smallBiasProbability()) {
-            return Randomly.fromOptions(-1, Integer.MAX_VALUE, Integer.MIN_VALUE, 1, 0);
+            return Randomly.fromOptions(-1, 1, 0);
         } else {
             if (cacheProbability()) {
                 Long l = getFromLongCache();
@@ -222,7 +222,7 @@ public final class Randomly {
                     return l;
                 }
             }
-            long nextInt = getThreadRandom().get().nextInt();
+            long nextInt = getThreadRandom().get().nextInt() % 1000;
             addToCache(nextInt);
             return nextInt;
         }
