@@ -75,8 +75,7 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
         LTRIM("LTRIM", 1, MySQLSchema.MySQLDataType.VARCHAR),
         SUBSTRING("SUBSTRING", 3, MySQLSchema.MySQLDataType.VARCHAR),
         ABS("ABS", 1, MySQLSchema.MySQLDataType.INT),
-        CEILING("CEILING", 1, MySQLSchema.MySQLDataType.FLOAT),
-        RAND("RAND", 0, MySQLSchema.MySQLDataType.FLOAT);
+        CEILING("CEILING", 1, MySQLSchema.MySQLDataType.FLOAT);
 
         private final String name;
         private final int argumentCount;
