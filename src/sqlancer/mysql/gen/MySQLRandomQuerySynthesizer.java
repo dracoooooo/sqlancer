@@ -68,7 +68,7 @@ public final class MySQLRandomQuerySynthesizer {
 
         MySQLTypedExpressionGenerator gen = new MySQLTypedExpressionGenerator(globalState).setColumns(tables.getColumns());
 
-        boolean allowAggregates = false;
+        boolean allowAggregates = Randomly.getBoolean();
 
         List<MySQLTableReference> tableList = tables.getTables().stream()
                 .map(MySQLTableReference::new).collect(Collectors.toList());
