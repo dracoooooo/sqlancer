@@ -75,8 +75,7 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
         LTRIM("LTRIM", 1, MySQLSchema.MySQLDataType.VARCHAR),
         SUBSTRING("SUBSTRING", 3, MySQLSchema.MySQLDataType.VARCHAR),
         ABS("ABS", 1, MySQLSchema.MySQLDataType.INT),
-        CEILING("CEILING", 1, MySQLSchema.MySQLDataType.FLOAT),
-        RAND("RAND", 0, MySQLSchema.MySQLDataType.FLOAT);
+        CEILING("CEILING", 1, MySQLSchema.MySQLDataType.FLOAT);
 
         private final String name;
         private final int argumentCount;
@@ -315,7 +314,7 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
     private MySQLExpression getAggregate(MySQLAggregate.MySQLAggregateFunction function) {
 
         if (function == MySQLAggregate.MySQLAggregateFunction.COUNT && Randomly.getBoolean()) {
-            // COUNT(*)
+            // Special case for COUNT(*)
             return new MySQLAggregate(function, null, true);
         } else {
             switch (function) {
@@ -334,48 +333,43 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
     }
 
 
-        public MySQLExpression generateHavingClause () {
-            allowAggregates = true;
-            MySQLExpression expression = generateExpression(MySQLSchema.MySQLDataType.BOOLEAN);
-            allowAggregates = false;
-            return expression;
-        }
-
-        private MySQLExpression generateSubqueryComparison ( int depth){
-            MySQLSchema.MySQLDataType type = MySQLSchema.MySQLDataType.getRandom(globalState);
-            MySQLExpression leftExpression = generateExpression(type, depth + 1);
-            MySQLBinaryComparisonOperation.BinaryComparisonOperator comparisonOperator =
-                    MySQLBinaryComparisonOperation.BinaryComparisonOperator.getRandom();
-            MySQLSubqueryComparisonOperation.SubqueryComparisonOperator subqueryOperator = MySQLSubqueryComparisonOperation.SubqueryComparisonOperator.getRandom();
-
-            // Generate a subquery that returns a single column of the same type
-            MySQLSelect subquery = MySQLRandomQuerySynthesizer.generateTypedSingleColumnWithoutSkipAndLimit(globalState, type);
-
-            return new MySQLSubqueryComparisonOperation(leftExpression, comparisonOperator, subqueryOperator, subquery);
-        }
-
-        public MySQLExpression generateJoin (MySQLGlobalState globalState){
-            MySQLSchema.MySQLEdge edge = globalState.getSchema().getRandomEdge();
-            MySQLSchema.MySQLTable leftTable = edge.getSourceTable();
-            MySQLSchema.MySQLTable rightTable = edge.getTargetTable();
-            MySQLSchema.MySQLColumn leftColumn = edge.getSourceColumn();
-            MySQLSchema.MySQLColumn rightColumn = edge.getTargetColumn();
-
-            MySQLJoin.JoinType joinType = Randomly.fromOptions(MySQLJoin.JoinType.values());
-
-            MySQLExpression onClause = null;
-            if (joinType != MySQLJoin.JoinType.NATURAL) {
-                onClause = new MySQLBinaryComparisonOperation(
-                        new MySQLColumnReference(leftColumn, null),
-                        new MySQLColumnReference(rightColumn, null),
-                        MySQLBinaryComparisonOperation.BinaryComparisonOperator.EQUALS
-                );
-            }
-
-            MySQLSchema.MySQLTable joinTable = Randomly.fromOptions(leftTable, rightTable);
-            return new MySQLJoin(joinTable, onClause, joinType);
-
-        }
-
-
+    public MySQLExpression generateHavingClause() {
+        allowAggregates = true;
+        MySQLExpression expression = generateExpression(MySQLSchema.MySQLDataType.BOOLEAN);
+        allowAggregates = false;
+        return expression;
     }
+
+    private MySQLExpression generateSubqueryComparison(int depth) {
+        MySQLSchema.MySQLDataType type = MySQLSchema.MySQLDataType.getRandom(globalState);
+        MySQLExpression leftExpression = generateExpression(type, depth + 1);
+        MySQLBinaryComparisonOperation.BinaryComparisonOperator comparisonOperator =
+                MySQLBinaryComparisonOperation.BinaryComparisonOperator.getRandom();
+        MySQLSubqueryComparisonOperation.SubqueryComparisonOperator subqueryOperator = MySQLSubqueryComparisonOperation.SubqueryComparisonOperator.getRandom();
+
+        // Generate a subquery that returns a single column of the same type
+        MySQLSelect subquery = MySQLRandomQuerySynthesizer.generateTypedSingleColumnWithoutSkipAndLimit(globalState, type);
+
+        return new MySQLSubqueryComparisonOperation(leftExpression, comparisonOperator, subqueryOperator, subquery);
+    }
+
+    public static MySQLExpression generateJoin(MySQLSchema.MySQLEdge edge) {
+        MySQLSchema.MySQLTable leftTable = edge.getSourceTable();
+        MySQLSchema.MySQLTable rightTable = edge.getTargetTable();
+        MySQLSchema.MySQLColumn leftColumn = edge.getSourceColumn();
+        MySQLSchema.MySQLColumn rightColumn = edge.getTargetColumn();
+
+        // todo: add left/right/full [outer] join
+        MySQLJoin.JoinType joinType = Randomly.fromOptions(MySQLJoin.JoinType.INNER);
+
+        MySQLExpression onClause = null;
+        if (joinType != MySQLJoin.JoinType.NATURAL) {
+            onClause = new MySQLBinaryComparisonOperation(
+                    new MySQLColumnReference(leftColumn, null),
+                    new MySQLColumnReference(rightColumn, null),
+                    MySQLBinaryComparisonOperation.BinaryComparisonOperator.EQUALS
+            );
+        }
+        return new MySQLJoin(leftTable, rightTable, onClause, joinType);
+    }
+}
