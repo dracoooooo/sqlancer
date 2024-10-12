@@ -46,6 +46,8 @@ public interface MySQLVisitor {
 
     void visit(MySQLFunctionCall call);
 
+    void visit(MySQLAggregate aggregate);
+
     default void visit(MySQLExpression expr) {
         if (expr instanceof MySQLConstant) {
             visit((MySQLConstant) expr);
@@ -89,6 +91,8 @@ public interface MySQLVisitor {
             visit((MySQLSubqueryComparisonOperation) expr);
         } else if (expr instanceof MySQLFunctionCall) {
             visit((MySQLFunctionCall) expr);
+        } else if (expr instanceof MySQLAggregate) {
+            visit((MySQLAggregate) expr);
         } else {
             throw new AssertionError(expr);
         }

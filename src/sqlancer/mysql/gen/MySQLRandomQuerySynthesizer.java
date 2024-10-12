@@ -58,23 +58,27 @@ public final class MySQLRandomQuerySynthesizer {
         List<MySQLExpression> columns = new ArrayList<>();
         List<MySQLExpression> columnsWithoutAggregates = new ArrayList<>();
         for (int i = 0; i < nrColumns; i++) {
-            // TODO
-
-//            if (allowAggregates && Randomly.getBoolean()) {
+            if (!allowAggregates) {
+                MySQLExpression expression = gen.generateExpression(MySQLSchema.MySQLDataType.getRandom(globalState));
+                columnsWithoutAggregates.add(expression);
+            } else if (Randomly.getBoolean()) {
                 MySQLExpression expression = gen.generateExpression(MySQLSchema.MySQLDataType.getRandom(globalState));
                 columns.add(expression);
                 columnsWithoutAggregates.add(expression);
-//            }
-//            else {
-//                columns.add(gen.generateAggregate());
-//            }
+            } else {
+                columns.add(gen.generateAggregate());
+            }
         }
-        select.setFetchColumns(columns);
+        if (allowAggregates) {
+            select.setFetchColumns(columns);
+        } else {
+            select.setFetchColumns(columnsWithoutAggregates);
+        }
         List<MySQLTableReference> tableList = tables.getTables().stream()
                 .map(MySQLTableReference::new).collect(Collectors.toList());
         List<MySQLExpression> updatedTableList = MySQLCommon.getTableReferences(tableList);
 
-        if (Randomly.getBoolean()&&globalState.getSchema().getRandomEdge()!=null) {
+        if (Randomly.getBoolean() && globalState.getSchema().getRandomEdge() != null) {
             List<MySQLExpression> joinStatement = new ArrayList<>();
             joinStatement.add(gen.generateJoin(globalState));
             select.setJoinList(joinStatement);
@@ -82,7 +86,7 @@ public final class MySQLRandomQuerySynthesizer {
 
         select.setFromList(updatedTableList);
 //        if (Randomly.getBoolean()) {
-            select.setWhereClause(gen.generateExpression(MySQLSchema.MySQLDataType.BOOLEAN));
+        select.setWhereClause(gen.generateExpression(MySQLSchema.MySQLDataType.BOOLEAN));
 //        }
 
         if (Randomly.getBooleanWithRatherLowProbability()) {

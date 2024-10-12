@@ -23,19 +23,30 @@ public class MySQLAggregate implements MySQLExpression {
     }
 
 
-    public MySQLSchema.MySQLDataType getType() {
-        switch (function) {
+    public MySQLExpression getExpr() {
+        return expr;
+    }
+
+    public String getFunctionName() {
+        switch (function)
+        {
             case COUNT:
-                return MySQLSchema.MySQLDataType.INT;
-            case AVG:
+                return "COUNT";
             case SUM:
-                return MySQLSchema.MySQLDataType.DECIMAL;
+                return "SUM";
+            case AVG:
+                return "AVG";
             case MIN:
+                return "MIN";
             case MAX:
-                return expr.getExpectedValue().getType();
+                return "MAX";
             default:
-                throw new AssertionError("Unhandled aggregate function: " + function);
+                throw new AssertionError();
         }
+    }
+
+    public boolean isCountStar() {
+        return isCountStar;
     }
 
 
