@@ -12,12 +12,14 @@ public class MySQLJoin implements MySQLExpression {
     private final MySQLTable table2;
     private MySQLExpression onClause;
     private JoinType type;
+    private boolean isFirstJoin;
 
-    public MySQLJoin(MySQLTable table1, MySQLTable table2, MySQLExpression onClause, JoinType type) {
+    public MySQLJoin(MySQLTable table1, MySQLTable table2, MySQLExpression onClause, JoinType type, boolean isFirstJoin) {
         this.table1 = table1;
         this.table2 = table2;
         this.onClause = onClause;
         this.type = type;
+        this.isFirstJoin = isFirstJoin;
     }
 
     public MySQLTable getLeftTable() {
@@ -42,5 +44,9 @@ public class MySQLJoin implements MySQLExpression {
 
     public void setType(JoinType type) {
         this.type = type;
+    }
+
+    public boolean isFirstJoin() {
+        return isFirstJoin;
     }
 }

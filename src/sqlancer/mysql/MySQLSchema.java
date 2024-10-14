@@ -71,7 +71,7 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
             }
         }
 
-        public MySQLColumn(String name, MySQLDataType columnType, String exactType,  boolean isPrimaryKey, int precision) {
+        public MySQLColumn(String name, MySQLDataType columnType, String exactType, boolean isPrimaryKey, int precision) {
             super(name, null, columnType);
             this.exactType = exactType;
             this.isPrimaryKey = isPrimaryKey;
@@ -411,6 +411,7 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
         }
         return columns;
     }
+
     public MySQLSchema(List<MySQLTable> databaseTables) {
         super(databaseTables);
     }
@@ -425,10 +426,49 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
     }
 
     public MySQLEdge getRandomEdge() {
-        if(edges.isEmpty()) {
+        if (edges.isEmpty()) {
             return null;
         }
         return Randomly.fromList(edges);
+    }
+
+    public List<MySQLEdge> getRandomConnectedEdges() {
+        List<MySQLEdge> connectedEdges = new ArrayList<>();
+        List<MySQLTable> nodeTables = new ArrayList<>();
+
+        if(edges.isEmpty()) {
+            return connectedEdges;
+        }
+        MySQLEdge firstEdge = getRandomEdge();
+        List<MySQLEdge> availableEdges = new ArrayList<>(edges);
+        availableEdges.remove(firstEdge);
+        connectedEdges.add(firstEdge);
+
+        nodeTables.add(firstEdge.getSourceTable());
+        nodeTables.add(firstEdge.getTargetTable());
+
+        while (!availableEdges.isEmpty()) {
+            MySQLEdge edge = Randomly.fromList(availableEdges);
+            if ((nodeTables.contains(edge.getSourceTable()) && !nodeTables.contains(edge.getTargetTable()))
+                    || (nodeTables.contains(edge.getTargetTable()) && !nodeTables.contains(edge.getSourceTable()))) {
+                connectedEdges.add(edge);
+                availableEdges.remove(edge);
+                if (!nodeTables.contains(edge.getSourceTable())) {
+                    nodeTables.add(edge.getSourceTable());
+                } else {
+                    nodeTables.add(edge.getTargetTable());
+                }
+                if (Randomly.getBoolean()) {
+                    break;
+                }
+            } else {
+                if(Randomly.getBooleanWithRatherLowProbability()){
+                    break;
+                }
+            }
+
+        }
+        return connectedEdges;
     }
 
     public MySQLTables getRandomTableNonEmptyTables() {

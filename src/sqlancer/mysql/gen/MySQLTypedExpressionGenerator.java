@@ -353,11 +353,11 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
         return new MySQLSubqueryComparisonOperation(leftExpression, comparisonOperator, subqueryOperator, subquery);
     }
 
-    public static MySQLExpression generateJoin(MySQLSchema.MySQLEdge edge) {
-        MySQLSchema.MySQLTable leftTable = edge.getSourceTable();
-        MySQLSchema.MySQLTable rightTable = edge.getTargetTable();
-        MySQLSchema.MySQLColumn leftColumn = edge.getSourceColumn();
-        MySQLSchema.MySQLColumn rightColumn = edge.getTargetColumn();
+    public static MySQLExpression generateJoin(MySQLSchema.MySQLEdge edge, boolean isFirstJoin,List<MySQLSchema.MySQLTable> existingTables) {
+        MySQLSchema.MySQLTable leftTable = existingTables.contains(edge.getSourceTable()) ? edge.getSourceTable() : edge.getTargetTable();
+        MySQLSchema.MySQLTable rightTable = existingTables.contains(edge.getSourceTable()) ? edge.getTargetTable() : edge.getSourceTable();
+        MySQLSchema.MySQLColumn leftColumn = existingTables.contains(edge.getSourceTable()) ? edge.getSourceColumn() : edge.getTargetColumn();
+        MySQLSchema.MySQLColumn rightColumn = existingTables.contains(edge.getSourceTable()) ? edge.getTargetColumn() : edge.getSourceColumn();
 
         // todo: add left/right/full [outer] join
         MySQLJoin.JoinType joinType = Randomly.fromOptions(MySQLJoin.JoinType.INNER);
@@ -370,6 +370,6 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
                     MySQLBinaryComparisonOperation.BinaryComparisonOperator.EQUALS
             );
         }
-        return new MySQLJoin(leftTable, rightTable, onClause, joinType);
+        return new MySQLJoin(leftTable, rightTable, onClause, joinType, isFirstJoin);
     }
 }

@@ -276,7 +276,9 @@ public class MySQLToStringVisitor extends ToStringVisitor<MySQLExpression> imple
 
     @Override
     public void visit(MySQLJoin join) {
-        sb.append(join.getLeftTable().getName());
+        if(join.isFirstJoin()) {
+            sb.append(join.getLeftTable().getName());
+        }
         sb.append(" ");
         switch (join.getType()) {
             case NATURAL:

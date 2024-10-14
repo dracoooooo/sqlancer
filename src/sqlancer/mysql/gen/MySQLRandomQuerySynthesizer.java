@@ -55,13 +55,45 @@ public final class MySQLRandomQuerySynthesizer {
         MySQLSelect select = new MySQLSelect();
         // Choose a join or raw tables
         MySQLTables tables;
-        var edge = globalState.getSchema().getRandomEdge();
-        if (Randomly.getBoolean() && edge != null) {
+        List<MySQLSchema.MySQLEdge> edges = new ArrayList<>();
+        if (Randomly.getBoolean()) {
+            edges = new ArrayList<>(globalState.getSchema().getRandomConnectedEdges());
+        } else {
+            MySQLSchema.MySQLEdge edge = globalState.getSchema().getRandomEdge();
+            if(edge != null) {
+                edges.add(edge);
+            }
+        }
+        if (Randomly.getBoolean()&&!edges.isEmpty()) {
             List<MySQLExpression> joinStatement = new ArrayList<>();
-            joinStatement.add(generateJoin(edge));
+            boolean isFirstJoin = true;
+            List<MySQLSchema.MySQLTable> existingTables = new ArrayList<>();//store the tables that have been joined
+            for(MySQLSchema.MySQLEdge edge : edges) {
+                joinStatement.add(generateJoin(edge, isFirstJoin,existingTables));
+                if(!existingTables.contains(edge.getSourceTable())){
+                    existingTables.add(edge.getSourceTable());
+                }
+                if(!existingTables.contains(edge.getTargetTable())){
+                    existingTables.add(edge.getTargetTable());
+                }
+                isFirstJoin = false;
+            }
+
             select.setJoinList(joinStatement);
 
-            tables = new MySQLTables(List.of(edge.getSourceTable(), edge.getTargetTable()));
+            List<MySQLSchema.MySQLTable> nodeTables = new ArrayList<>();
+
+            for (MySQLSchema.MySQLEdge edge : edges) {
+                if (!nodeTables.contains(edge.getSourceTable())) {
+                    nodeTables.add(edge.getSourceTable());
+                }
+                if (!nodeTables.contains(edge.getTargetTable())) {
+                    nodeTables.add(edge.getTargetTable());
+                }
+            }
+
+            tables = new MySQLTables(nodeTables);
+
         } else {
             tables = globalState.getSchema().getRandomTableNonEmptyTables();
         }
@@ -85,8 +117,7 @@ public final class MySQLRandomQuerySynthesizer {
             if (allowAggregates && Randomly.getBoolean()) {
                 // gen aggregate
                 columns.add(gen.generateAggregate());
-            }
-            else {
+            } else {
                 MySQLExpression expression = gen.generateExpression(MySQLSchema.MySQLDataType.getRandom(globalState));
                 columns.add(expression);
             }
@@ -94,7 +125,7 @@ public final class MySQLRandomQuerySynthesizer {
         select.setFetchColumns(columns);
 
 //        if (Randomly.getBoolean()) {
-            select.setWhereClause(gen.generateExpression(MySQLSchema.MySQLDataType.BOOLEAN));
+        select.setWhereClause(gen.generateExpression(MySQLSchema.MySQLDataType.BOOLEAN));
 //        }
 
         if (Randomly.getBooleanWithRatherLowProbability()) {
