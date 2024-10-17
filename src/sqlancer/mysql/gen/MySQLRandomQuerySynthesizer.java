@@ -51,7 +51,7 @@ public final class MySQLRandomQuerySynthesizer {
         return select;
     }
 
-    public static MySQLSelect generateTyped(MySQLGlobalState globalState, int nrColumns, boolean addSkipAndLimit) {
+    public static MySQLSelect generateTyped(MySQLGlobalState globalState, int nrColumns, MySQLSchema.MySQLDataType requiredType, boolean allowAgg, boolean addSkipAndLimit) {
         MySQLSelect select = new MySQLSelect();
         // Choose a join or raw tables
         MySQLTables tables;
@@ -100,8 +100,6 @@ public final class MySQLRandomQuerySynthesizer {
 
         MySQLTypedExpressionGenerator gen = new MySQLTypedExpressionGenerator(globalState).setColumns(tables.getColumns());
 
-        boolean allowAggregates = Randomly.getBoolean();
-
         List<MySQLTableReference> tableList = tables.getTables().stream()
                 .map(MySQLTableReference::new).collect(Collectors.toList());
         List<MySQLExpression> updatedTableList = MySQLCommon.getTableReferences(tableList);
@@ -113,15 +111,23 @@ public final class MySQLRandomQuerySynthesizer {
         }
 
         List<MySQLExpression> columns = new ArrayList<>();
-        for (int i = 0; i < nrColumns; i++) {
-            if (allowAggregates && Randomly.getBoolean()) {
-                // gen aggregate
+
+        // todo: change prob
+        // if choose to allow aggregates, only agg is allowed after SELECT
+        // doing this is to prevent false positive in differential testing
+        if (allowAgg && Randomly.getBoolean()) {
+            // gen aggregate
+            for (int i = 0; i < nrColumns; i++) {
                 columns.add(gen.generateAggregate());
-            } else {
-                MySQLExpression expression = gen.generateExpression(MySQLSchema.MySQLDataType.getRandom(globalState));
+            }
+        } else {
+            for (int i = 0; i < nrColumns; i++) {
+                MySQLSchema.MySQLDataType dataType = requiredType == null ? MySQLSchema.MySQLDataType.getRandom(globalState) : requiredType;
+                MySQLExpression expression = gen.generateExpression(dataType);
                 columns.add(expression);
             }
         }
+
         select.setFetchColumns(columns);
 
 //        if (Randomly.getBoolean()) {
@@ -150,35 +156,6 @@ public final class MySQLRandomQuerySynthesizer {
     }
 
     public static MySQLSelect generateTypedSingleColumnWithoutSkipAndLimit(MySQLGlobalState globalState, MySQLSchema.MySQLDataType requiredType) {
-        MySQLTables tables = globalState.getSchema().getRandomTableNonEmptyTables();
-        MySQLTypedExpressionGenerator gen = new MySQLTypedExpressionGenerator(globalState).setColumns(tables.getColumns());
-        MySQLSelect select = new MySQLSelect();
-
-        // Generate a single column of the required type
-        MySQLExpression column = gen.generateExpression(requiredType);
-        select.setFetchColumns(List.of(column));
-
-        List<MySQLTableReference> tableList = tables.getTables().stream()
-                .map(MySQLTableReference::new).collect(Collectors.toList());
-        List<MySQLExpression> updatedTableList = MySQLCommon.getTableReferences(tableList);
-        select.setFromList(updatedTableList);
-
-        if (Randomly.getBoolean()) {
-            select.setWhereClause(gen.generateExpression(MySQLSchema.MySQLDataType.BOOLEAN));
-        }
-
-//        if (Randomly.getBooleanWithRatherLowProbability()) {
-//            select.setOrderByClauses(gen.generateOrderBys());
-//        }
-
-//        if (Randomly.getBoolean()) {
-//            select.setLimitClause(MySQLConstant.createIntConstant(Randomly.getPositiveOrZeroNonCachedInteger()));
-//            if (Randomly.getBoolean()) {
-//                select.setOffsetClause(MySQLConstant.createIntConstant(Randomly.getPositiveOrZeroNonCachedInteger()));
-//            }
-//        }
-
-        return select;
+        return generateTyped(globalState, 1, requiredType, true, false);
     }
-
 }

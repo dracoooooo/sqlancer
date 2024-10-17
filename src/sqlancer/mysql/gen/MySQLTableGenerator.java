@@ -412,7 +412,7 @@ public class MySQLTableGenerator {
         sb.append(" ");
         MySQLDataType randomType = MySQLDataType.getRandom(globalState);
         if (forceAsPrimaryKey) {
-            while (randomType == MySQLDataType.VARCHAR) {
+            while (randomType == MySQLDataType.VARCHAR || randomType == MySQLDataType.BOOLEAN) {
                 randomType = MySQLDataType.getRandom(globalState);
             }
         }
