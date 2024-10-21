@@ -51,7 +51,7 @@ public final class MySQLRandomQuerySynthesizer {
         return select;
     }
 
-    public static MySQLSelect generateTyped(MySQLGlobalState globalState, int nrColumns, MySQLSchema.MySQLDataType requiredType, boolean allowAgg, boolean addSkipAndLimit) {
+    public static MySQLSelect generateTyped(MySQLGlobalState globalState, int nrColumns, MySQLSchema.MySQLDataType requiredType, boolean allowAgg, boolean addSkipAndLimit, boolean allowNull) {
         MySQLSelect select = new MySQLSelect();
         // Choose a join or raw tables
         MySQLTables tables;
@@ -130,9 +130,14 @@ public final class MySQLRandomQuerySynthesizer {
 
         select.setFetchColumns(columns);
 
-//        if (Randomly.getBoolean()) {
-        select.setWhereClause(gen.generateExpression(MySQLSchema.MySQLDataType.BOOLEAN));
-//        }
+        var where = gen.generateExpression(MySQLSchema.MySQLDataType.BOOLEAN);
+        if (nrColumns == 1 && !allowAgg && !allowNull) {
+            var col = columns.get(0);
+            var colNotNull = new MySQLUnaryPostfixOperation(col, MySQLUnaryPostfixOperation.UnaryPostfixOperator.IS_NULL, true);
+            where = new MySQLBinaryLogicalOperation(where, colNotNull, MySQLBinaryLogicalOperation.MySQLBinaryLogicalOperator.AND);
+        }
+
+        select.setWhereClause(where);
 
         if (Randomly.getBooleanWithRatherLowProbability()) {
             select.setOrderByClauses(gen.generateOrderBys());
@@ -156,6 +161,6 @@ public final class MySQLRandomQuerySynthesizer {
     }
 
     public static MySQLSelect generateTypedSingleColumnWithoutSkipAndLimit(MySQLGlobalState globalState, MySQLSchema.MySQLDataType requiredType) {
-        return generateTyped(globalState, 1, requiredType, true, false);
+        return generateTyped(globalState, 1, requiredType, false, false, false);
     }
 }

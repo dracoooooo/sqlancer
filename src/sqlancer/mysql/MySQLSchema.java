@@ -1,5 +1,7 @@
 package sqlancer.mysql;
 
+import java.io.File;
+import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
@@ -10,6 +12,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import sqlancer.Randomly;
 import sqlancer.SQLConnection;
 import sqlancer.common.schema.AbstractRelationalTable;
@@ -255,6 +262,7 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
 
     }
 
+    @JsonSerialize(using = MySQLEdgeSerializer.class)
     public static class MySQLEdge {
         private static int COUNT = 0;
         private final String name; // Just a name, used in translator
@@ -265,11 +273,15 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
 
         public MySQLEdge(MySQLTable sourceTable, MySQLColumn sourceColumn,
                          MySQLTable targetTable, MySQLColumn targetColumn) {
-            this.name = "Relation" + COUNT++;
+            this.name = "e" + COUNT++;
             this.sourceTable = sourceTable;
             this.sourceColumn = sourceColumn;
             this.targetTable = targetTable;
             this.targetColumn = targetColumn;
+        }
+
+        public String getName() {
+            return name;
         }
 
         public MySQLTable getSourceTable() {
@@ -326,6 +338,7 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
     private static List<MySQLEdge> fromConnectionGetEdges(SQLConnection con, String databaseName,
                                                           List<MySQLTable> tables) throws SQLException {
         List<MySQLEdge> edges = new ArrayList<>();
+        MySQLEdge.COUNT = 0;
         try (Statement s = con.createStatement()) {
             String query = "select TABLE_NAME, COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME " +
                     "from information_schema.KEY_COLUMN_USAGE " +
@@ -523,5 +536,25 @@ public class MySQLSchema extends AbstractSchema<MySQLGlobalState, MySQLTable> {
         return true;
     }
 
+    public static class MySQLEdgeSerializer extends JsonSerializer<MySQLEdge> {
+        @Override
+        public void serialize(MySQLEdge edge, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+            gen.writeStartObject();
+            gen.writeStringField("name", edge.getName());
+            gen.writeStringField("sourceTable", edge.getSourceTable().getName());
+            gen.writeStringField("sourceColumn", edge.getSourceColumn().getName());
+            gen.writeStringField("targetTable", edge.getTargetTable().getName());
+            gen.writeStringField("targetColumn", edge.getTargetColumn().getName());
+            gen.writeEndObject();
+        }
+    }
 
+    public String dumpEdges() {
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            return mapper.writeValueAsString(this.getEdges());
+        } catch (IOException e) {
+            throw new AssertionError(e);
+        }
+    }
 }

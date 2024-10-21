@@ -205,6 +205,7 @@ public class MySQLProvider extends SQLProviderAdapter<MySQLGlobalState, MySQLOpt
         } catch (Exception ignored) {
         }
         globalState.getLogger().writeCurrent("-- Database Generation finished");
+        globalState.getLogger().writeMeta(globalState.getSchema().dumpEdges());
     }
 
     @Override

@@ -75,16 +75,20 @@ public final class Main {
         private File curFile;
         private File queryPlanFile;
         private File reduceFile;
+        private File metaFile;
         private FileWriter logFileWriter;
         public FileWriter currentFileWriter;
         private FileWriter queryPlanFileWriter;
         private FileWriter reduceFileWriter;
+        private FileWriter metaFileWriter;
 
         private static final List<String> INITIALIZED_PROVIDER_NAMES = new ArrayList<>();
         private final boolean logEachSelect;
         private final boolean logQueryPlan;
 
         private final boolean useReducer;
+        private final boolean dumpMeta;
+
         private final DatabaseProvider<?, ?, ?> databaseProvider;
 
         private static final class AlsoWriteToConsoleFileWriter extends FileWriter {
@@ -128,7 +132,10 @@ public final class Main {
                     reduceFileDir.mkdir();
                 }
                 this.reduceFile = new File(reduceFileDir, databaseName + "-reduce.log");
-
+            }
+            this.dumpMeta = options.dumpMeta();
+            if (dumpMeta) {
+                metaFile = new File(dir, databaseName + "-meta.log");
             }
             this.databaseProvider = provider;
         }
@@ -209,6 +216,20 @@ public final class Main {
             return reduceFileWriter;
         }
 
+        public FileWriter getMetaFileWriter() {
+            if (!dumpMeta) {
+                throw new UnsupportedOperationException();
+            }
+            if (metaFileWriter == null) {
+                try {
+                    metaFileWriter = new FileWriter(metaFile, false);
+                } catch (IOException e) {
+                    throw new AssertionError(e);
+                }
+            }
+            return metaFileWriter;
+        }
+
         public void writeCurrent(StateToReproduce state) {
             if (!logEachSelect) {
                 throw new UnsupportedOperationException();
@@ -228,6 +249,18 @@ public final class Main {
 
         public void writeCurrentNoLineBreak(String input) {
             write(databaseProvider.getLoggableFactory().createLoggableWithNoLinebreak(input));
+        }
+
+        public void writeMeta(String input) {
+            if (!dumpMeta) {
+                throw new UnsupportedOperationException();
+            }
+            try {
+                getMetaFileWriter().append(input);
+                metaFileWriter.flush();
+            } catch (IOException e) {
+                throw new AssertionError();
+            }
         }
 
         private void write(Loggable loggable) {

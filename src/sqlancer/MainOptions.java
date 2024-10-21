@@ -16,6 +16,9 @@ public class MainOptions {
     @Parameter(names = { "--help", "-h" }, description = "Lists all supported options and commands", help = true)
     private boolean help; // NOPMD
 
+    @Parameter(names = { "--dump-meta"}, description = "Dumps meta information", help = true)
+    private boolean dumpMeta = true; // NOPMD
+
     @Parameter(names = {
             "--num-threads" }, description = "How many threads should run concurrently to test separate databases")
     private int nrConcurrentThreads = 16; // NOPMD
@@ -190,6 +193,10 @@ public class MainOptions {
 
     public boolean logQueryPlan() {
         return logQueryPlan;
+    }
+
+    public boolean dumpMeta() {
+        return dumpMeta;
     }
 
     public boolean enableQPG() {
