@@ -7,11 +7,8 @@ import sqlancer.mysql.MySQLSchema;
 import sqlancer.mysql.MySQLSchema.MySQLTables;
 import sqlancer.mysql.ast.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
-
-import static sqlancer.mysql.gen.MySQLTypedExpressionGenerator.generateJoin;
 
 public final class MySQLRandomQuerySynthesizer {
 
@@ -51,6 +48,87 @@ public final class MySQLRandomQuerySynthesizer {
         return select;
     }
 
+    public static List<MySQLSchema.MySQLEdge> getRandomEdgeChain(List<MySQLSchema.MySQLEdge> allEdges) {
+        if (allEdges == null || allEdges.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<MySQLSchema.MySQLEdge> resultChain = new ArrayList<>();
+        Random random = new Random();
+
+        // Create a map from sourceTable to list of edges
+        Map<MySQLSchema.MySQLTable, List<MySQLSchema.MySQLEdge>> edgesBySource = new HashMap<>();
+        for (MySQLSchema.MySQLEdge edge : allEdges) {
+            edgesBySource.computeIfAbsent(edge.getSourceTable(), k -> new ArrayList<>()).add(edge);
+        }
+
+        // Randomly select a starting edge
+        MySQLSchema.MySQLEdge currentEdge = allEdges.get(random.nextInt(allEdges.size()));
+        resultChain.add(currentEdge);
+
+        // Remove the starting edge from the available edges
+        edgesBySource.get(currentEdge.getSourceTable()).remove(currentEdge);
+
+        MySQLSchema.MySQLTable currentTargetTable = currentEdge.getTargetTable();
+
+        while (true) {
+            // Find all edges where sourceTable == currentTargetTable
+            List<MySQLSchema.MySQLEdge> nextEdges = edgesBySource.get(currentTargetTable);
+            if (nextEdges == null || nextEdges.isEmpty() || Randomly.getBoolean()) {
+                // No more edges to extend the chain
+                break;
+            }
+
+            // Randomly select one of these edges
+            MySQLSchema.MySQLEdge nextEdge = nextEdges.get(random.nextInt(nextEdges.size()));
+            resultChain.add(nextEdge);
+
+            // Remove the selected edge from the list to prevent reusing it
+            nextEdges.remove(nextEdge);
+            if (nextEdges.isEmpty()) {
+                edgesBySource.remove(currentTargetTable);
+            }
+
+            // Update currentTargetTable
+            currentTargetTable = nextEdge.getTargetTable();
+        }
+
+        return resultChain;
+    }
+
+    public static List<MySQLExpression> createJoinsFromEdges(List<MySQLSchema.MySQLEdge> allEdges) {
+        // Get a random chain of connected edges
+        List<MySQLSchema.MySQLEdge> edgeChain = getRandomEdgeChain(allEdges);
+        List<MySQLExpression> joins = new ArrayList<>();
+        boolean isFirstJoin = true;
+
+        for (MySQLSchema.MySQLEdge edge : edgeChain) {
+            MySQLSchema.MySQLTable leftTable = edge.getSourceTable();
+            MySQLSchema.MySQLTable rightTable = edge.getTargetTable();
+            MySQLSchema.MySQLColumn leftColumn = edge.getSourceColumn();
+            MySQLSchema.MySQLColumn rightColumn = edge.getTargetColumn();
+
+            // todo: add left/right/full [outer] join
+            MySQLJoin.JoinType joinType = Randomly.fromOptions(MySQLJoin.JoinType.INNER);
+
+            MySQLExpression onClause = null;
+            if (joinType != MySQLJoin.JoinType.NATURAL) {
+                onClause = new MySQLBinaryComparisonOperation(
+                        new MySQLColumnReference(leftColumn, null),
+                        new MySQLColumnReference(rightColumn, null),
+                        MySQLBinaryComparisonOperation.BinaryComparisonOperator.EQUALS
+                );
+            }
+            MySQLJoin join = new MySQLJoin(leftTable, rightTable, onClause, joinType, isFirstJoin);
+            joins.add(join);
+
+            // After the first join, set isFirstJoin to false
+            isFirstJoin = false;
+        }
+
+        return joins;
+    }
+
     public static MySQLSelect generateTyped(MySQLGlobalState globalState, int nrColumns, MySQLSchema.MySQLDataType requiredType, boolean allowAgg, boolean addSkipAndLimit, boolean allowNull) {
         MySQLSelect select = new MySQLSelect();
         // Choose a join or raw tables
@@ -65,19 +143,19 @@ public final class MySQLRandomQuerySynthesizer {
             }
         }
         if (Randomly.getBoolean()&&!edges.isEmpty()) {
-            List<MySQLExpression> joinStatement = new ArrayList<>();
-            boolean isFirstJoin = true;
-            List<MySQLSchema.MySQLTable> existingTables = new ArrayList<>();//store the tables that have been joined
-            for(MySQLSchema.MySQLEdge edge : edges) {
-                joinStatement.add(generateJoin(edge, isFirstJoin,existingTables));
-                if(!existingTables.contains(edge.getSourceTable())){
-                    existingTables.add(edge.getSourceTable());
-                }
-                if(!existingTables.contains(edge.getTargetTable())){
-                    existingTables.add(edge.getTargetTable());
-                }
-                isFirstJoin = false;
-            }
+            List<MySQLExpression> joinStatement = createJoinsFromEdges(edges);
+//            boolean isFirstJoin = true;
+//            List<MySQLSchema.MySQLTable> existingTables = new ArrayList<>();//store the tables that have been joined
+//            for(MySQLSchema.MySQLEdge edge : edges) {
+//                joinStatement.add(generateJoin(edge, isFirstJoin,existingTables));
+//                if(!existingTables.contains(edge.getSourceTable())){
+//                    existingTables.add(edge.getSourceTable());
+//                }
+//                if(!existingTables.contains(edge.getTargetTable())){
+//                    existingTables.add(edge.getTargetTable());
+//                }
+//                isFirstJoin = false;
+//            }
 
             select.setJoinList(joinStatement);
 

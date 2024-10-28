@@ -353,6 +353,7 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
         return new MySQLSubqueryComparisonOperation(leftExpression, comparisonOperator, subqueryOperator, subquery);
     }
 
+    @Deprecated
     public static MySQLExpression generateJoin(MySQLSchema.MySQLEdge edge, boolean isFirstJoin,List<MySQLSchema.MySQLTable> existingTables) {
         MySQLSchema.MySQLTable leftTable = existingTables.contains(edge.getSourceTable()) ? edge.getSourceTable() : edge.getTargetTable();
         MySQLSchema.MySQLTable rightTable = existingTables.contains(edge.getSourceTable()) ? edge.getTargetTable() : edge.getSourceTable();
