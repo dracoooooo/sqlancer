@@ -161,13 +161,14 @@ public final class MySQLRandomQuerySynthesizer {
 
             List<MySQLSchema.MySQLTable> nodeTables = new ArrayList<>();
 
-            for (MySQLSchema.MySQLEdge edge : edges) {
-                if (!nodeTables.contains(edge.getSourceTable())) {
-                    nodeTables.add(edge.getSourceTable());
-                }
-                if (!nodeTables.contains(edge.getTargetTable())) {
-                    nodeTables.add(edge.getTargetTable());
-                }
+             for (MySQLExpression e : joinStatement) {
+                var join = (MySQLJoin) e;
+                 if (!nodeTables.contains(join.getLeftTable())) {
+                     nodeTables.add(join.getLeftTable());
+                 }
+                 if (!nodeTables.contains(join.getRightTable())) {
+                     nodeTables.add(join.getRightTable());
+                 }
             }
 
             tables = new MySQLTables(nodeTables);
