@@ -13,6 +13,7 @@ import sqlancer.common.oracle.TestOracle;
 import sqlancer.mariadb.MariaDBOptions.MariaDBOracleFactory;
 import sqlancer.mariadb.MariaDBProvider.MariaDBGlobalState;
 import sqlancer.mariadb.oracle.MariaDBDQPOracle;
+import sqlancer.mariadb.oracle.MariaDBFuzzer;
 import sqlancer.mariadb.oracle.MariaDBNoRECOracle;
 
 @Parameters(separators = "=", commandDescription = "MariaDB (default port: " + MariaDBOptions.DEFAULT_PORT
@@ -22,7 +23,7 @@ public class MariaDBOptions implements DBMSSpecificOptions<MariaDBOracleFactory>
     public static final int DEFAULT_PORT = 3306;
 
     @Parameter(names = "--oracle")
-    public List<MariaDBOracleFactory> oracles = Arrays.asList(MariaDBOracleFactory.NOREC);
+    public List<MariaDBOracleFactory> oracles = Arrays.asList(MariaDBOracleFactory.FUZZER);
 
     public enum MariaDBOracleFactory implements OracleFactory<MariaDBGlobalState> {
 
@@ -38,6 +39,13 @@ public class MariaDBOptions implements DBMSSpecificOptions<MariaDBOracleFactory>
             @Override
             public TestOracle<MariaDBGlobalState> create(MariaDBGlobalState globalState) throws SQLException {
                 return new MariaDBDQPOracle(globalState);
+            }
+        },
+
+        FUZZER {
+            @Override
+            public TestOracle<MariaDBGlobalState> create(MariaDBGlobalState globalState) throws SQLException {
+                return new MariaDBFuzzer(globalState);
             }
         }
     }

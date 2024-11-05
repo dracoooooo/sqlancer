@@ -348,7 +348,7 @@ public final class Main {
 
         private final GlobalState<?, ?, C> globalState;
 
-        QueryManager(GlobalState<?, ?, C> globalState) {
+        public QueryManager(GlobalState<?, ?, C> globalState) {
             this.globalState = globalState;
         }
 

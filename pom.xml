@@ -36,6 +36,7 @@
   </scm>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+      <jooq.version>3.14.8</jooq.version>
   </properties>
   <build>
     <sourceDirectory>src</sourceDirectory>
@@ -270,7 +271,23 @@
     </plugins>
   </build>
 
+
   <dependencies>
+    <dependency>
+      <groupId>org.jooq</groupId>
+      <artifactId>jooq</artifactId>
+      <version>${jooq.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jooq</groupId>
+      <artifactId>jooq-meta</artifactId>
+      <version>${jooq.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jooq</groupId>
+      <artifactId>jooq-codegen</artifactId>
+      <version>${jooq.version}</version>
+    </dependency>
     <dependency>
       <groupId>com.google.auto.service</groupId>
       <artifactId>auto-service</artifactId>

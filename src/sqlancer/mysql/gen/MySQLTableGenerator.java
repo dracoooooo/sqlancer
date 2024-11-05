@@ -159,7 +159,7 @@ public class MySQLTableGenerator {
         return new SQLQueryAdapter(sb.toString(), errors, true);
     }
 
-    // 新增方法：获取列的完整类型定义
+    // get the exact type of the column
     private String getColumnType(MySQLSchema.MySQLColumn column) {
         StringBuilder typeDef = new StringBuilder();
         typeDef.append(column.getExactType());
