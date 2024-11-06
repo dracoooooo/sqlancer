@@ -341,7 +341,10 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
     }
 
     private MySQLExpression generateSubqueryComparison(int depth) {
-        MySQLSchema.MySQLDataType type = MySQLSchema.MySQLDataType.getRandom(globalState);
+        // should not get a boolean
+        List<MySQLSchema.MySQLDataType> types = Arrays.asList(MySQLSchema.MySQLDataType.INT, MySQLSchema.MySQLDataType.FLOAT, MySQLSchema.MySQLDataType.DOUBLE, MySQLSchema.MySQLDataType.DECIMAL);
+        MySQLSchema.MySQLDataType type = Randomly.fromList(types);
+
         MySQLExpression leftExpression = generateExpression(type, depth + 1);
         MySQLBinaryComparisonOperation.BinaryComparisonOperator comparisonOperator =
                 MySQLBinaryComparisonOperation.BinaryComparisonOperator.getRandom();
