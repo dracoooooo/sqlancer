@@ -191,6 +191,8 @@ public final class MySQLRandomQuerySynthesizer {
 
         List<MySQLExpression> columns = new ArrayList<>();
 
+        gen.setAllowSubqueries(false);
+
         // todo: change prob
         // if choose to allow aggregates, only agg is allowed after SELECT
         // doing this is to prevent false positive in differential testing
@@ -209,6 +211,7 @@ public final class MySQLRandomQuerySynthesizer {
 
         select.setFetchColumns(columns);
 
+        gen.setAllowSubqueries(true);
         var where = gen.generateExpression(MySQLSchema.MySQLDataType.BOOLEAN);
         if (nrColumns == 1 && !allowAgg && !allowNull) {
             var col = columns.get(0);

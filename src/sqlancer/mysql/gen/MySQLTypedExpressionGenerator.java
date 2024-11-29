@@ -19,6 +19,7 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
     public MySQLTypedExpressionGenerator(MySQLGlobalState globalState) {
         this.globalState = globalState;
         allowAggregates = true;
+        allowSubqueries = true;
     }
 
     @Override
@@ -154,7 +155,16 @@ public class MySQLTypedExpressionGenerator extends TypedExpressionGenerator<MySQ
     }
 
     private MySQLExpression generateBooleanExpression(int depth) {
-        BooleanExpression exprType = Randomly.fromOptions(BooleanExpression.values());
+        BooleanExpression exprType;
+        if (!allowSubqueries) {
+            exprType = Randomly.fromOptions(BooleanExpression.NOT, BooleanExpression.IS_NULL, BooleanExpression.BINARY_LOGICAL_OPERATOR,
+                    BooleanExpression.BINARY_COMPARISON_OPERATION, BooleanExpression.BETWEEN_OPERATOR);
+        } else {
+            exprType = Randomly.fromOptions(BooleanExpression.values());
+            if (exprType.equals(BooleanExpression.EXISTS) || exprType.equals(BooleanExpression.SUBQUERY_COMPARISON_OPERATION)) {
+                allowSubqueries = false;
+            }
+        }
         MySQLExpression expr;
         switch (exprType) {
             case NOT:

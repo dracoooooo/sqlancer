@@ -10,6 +10,7 @@ public abstract class TypedExpressionGenerator<E, C, T> implements ExpressionGen
 
     protected List<C> columns = Collections.emptyList();
     protected boolean allowAggregates;
+    protected boolean allowSubqueries;
 
     public E generateExpression(T type) {
         return generateExpression(type, 0);
@@ -76,4 +77,7 @@ public abstract class TypedExpressionGenerator<E, C, T> implements ExpressionGen
     // return expr;
     // }
 
+    public void setAllowSubqueries(boolean allowSubqueries) {
+        this.allowSubqueries = allowSubqueries;
+    }
 }

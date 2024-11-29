@@ -12,6 +12,8 @@ import sqlancer.common.query.SQLQueryAdapter;
 import sqlancer.mysql.MySQLBugs;
 import sqlancer.mysql.MySQLGlobalState;
 
+import static sqlancer.mysql.MySQLBugs.bug116034;
+
 public class MySQLSetGenerator {
 
     private final Randomly r;
@@ -107,7 +109,12 @@ public class MySQLSetGenerator {
         // SORT_BUFFER_SIZE("sort_buffer_size", (r) -> r.getLong(32768,
         // Long.MAX_VALUE)),
         SQL_AUTO_IS_NULL("sql_auto_is_null", (r) -> Randomly.fromOptions("OFF", "ON"), Scope.GLOBAL, Scope.SESSION), //
-        SQL_BUFFER_RESULT("sql_buffer_result", (r) -> Randomly.fromOptions("OFF", "ON"), Scope.GLOBAL, Scope.SESSION), //
+        SQL_BUFFER_RESULT("sql_buffer_result", (r) -> {
+            if (bug116034) {
+                return "OFF";
+            }
+            return Randomly.fromOptions("OFF", "ON");
+            }, Scope.GLOBAL, Scope.SESSION), //
         SQL_LOG_OFF("sql_log_off", (r) -> Randomly.fromOptions("OFF", "ON"), Scope.GLOBAL, Scope.SESSION), //
         SQL_QUOTE_SHOW_CREATE("sql_quote_show_create", (r) -> Randomly.fromOptions("OFF", "ON"), Scope.GLOBAL,
                 Scope.SESSION),
